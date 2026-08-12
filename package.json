@@ -1,11 +1,10 @@
 {
-  "name": "turbowarp-desktop",
-  "description": "Scratch mod with a compiler, dark mode, a bunch of addons, and more.",
-  "version": "1.16.0",
+  "name": "HyperMimc-desktop",
+  "description": "HyperMimic - A TurboWarp mod combining practicality, speed, and aesthetics",
+  "version": "1.0.0",
   "license": "GPL-3.0",
   "author": {
-    "email": "contact@turbowarp.org",
-    "name": "Thomas Weber"
+    "name": "Clyain"
   },
   "type": "commonjs",
   "scripts": {
@@ -38,7 +37,7 @@
     "postcss-import": "^14.0.0",
     "postcss-loader": "^4.2.0",
     "postcss-simple-vars": "^6.0.3",
-    "scratch-gui": "github:TurboWarp/scratch-gui#develop",
+    "scratch-gui": "https://github.com/Hyper-Mimic/scratch-gui.git",
     "style-loader": "^0.23.0",
     "url-loader": "^4.1.1",
     "webpack": "4.47.0",
@@ -49,19 +48,18 @@
       "terser-webpack-plugin": "^4.2.3"
     }
   },
-  "homepage": "https://desktop.turbowarp.org/",
+  "homepage": "https://clyain.netlify.app/hm-desktop",
   "repository": {
     "type": "git",
-    "url": "https://github.com/TurboWarp/desktop.git"
+    "url": "https://github.com/Hyper-Mimic/desktop.git"
   },
   "bugs": {
-    "url": "https://github.com/TurboWarp/desktop/issues",
-    "email": "contact@turbowarp.org"
+    "url": "https://github.com/Hyper-Mimic/desktop/issues"
   },
   "main": "./src-main/entrypoint.js",
   "build": {
-    "appId": "org.turbowarp.desktop",
-    "productName": "TurboWarp",
+    "appId": "org.HyperMimic.desktop",
+    "productName": "HyperMimic",
     "files": [
       "node_modules/**/*",
       "src-main/**/*",
@@ -97,11 +95,11 @@
     },
     "appx": {
       "artifactName": "${productName}-MS-Store-${version}-${arch}.${ext}",
-      "applicationId": "TurboWarp",
-      "displayName": "TurboWarp",
-      "identityName": "45747ThomasWeber.TurboWarpDesktop",
+      "applicationId": "HyperMimic",
+      "displayName": "HyperMimc",
+      "identityName": "45747ThomasWeber.HyperMimicDesktop",
       "publisher": "CN=18FA7D4F-01BF-49F2-BF56-782DCEA49C69",
-      "publisherDisplayName": "Thomas Weber",
+      "publisherDisplayName": "Clyain",
       "backgroundColor": "#4c97ff",
       "showNameOnTiles": true,
       "languages": [
@@ -151,15 +149,15 @@
       "provisioningProfile": "build/development.provisionprofile"
     },
     "linux": {
-      "executableName": "turbowarp-desktop",
+      "executableName": "HyperMimic-desktop",
       "artifactName": "${productName}-${os}-${arch}-${version}.${ext}",
       "icon": "./build/",
-      "synopsis": "Mod of Scratch with a compiler and more features.",
-      "description": "TurboWarp is a Scratch mod with a compiler to run projects faster, dark mode for your eyes, a bunch of addons to improve the editor, and more.",
+      "synopsis": "HyperMimic - A TurboWarp mod combining practicality, speed, and aesthetics",
+      "description": "HyperMimic - A TurboWarp mod combining practicality, speed, and aesthetics",
       "category": "Development",
       "desktop": {
         "entry": {
-          "StartupWMClass": "turbowarp-desktop",
+          "StartupWMClass": "HyperMimic-desktop",
           "Keywords": "scratch;"
         }
       },
@@ -179,7 +177,7 @@
       ]
     },
     "snap": {
-      "summary": "Scratch mod with a compiler, dark mode, a bunch of addons, and more.",
+      "summary": "HyperMimic - A TurboWarp mod combining practicality, speed, and aesthetics",
       "allowNativeWayland": true,
       "plugs": [
         "default",
