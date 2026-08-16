@@ -48,7 +48,7 @@
       "terser-webpack-plugin": "^4.2.3"
     }
   },
-  "homepage": "https://clyain.netlify.app/hm-desktop",
+  "homepage": "https://clyain.netlify.app/hm/desktop",
   "repository": {
     "type": "git",
     "url": "https://github.com/Hyper-Mimic/desktop.git"
@@ -58,6 +58,9 @@
   },
   "main": "./src-main/entrypoint.js",
   "build": {
+    "electronDownload": {
+      "mirror": "https://npmmirror.com/mirrors/electron/"
+    },
     "appId": "org.HyperMimic.desktop",
     "productName": "HyperMimic",
     "files": [
@@ -96,7 +99,7 @@
     "appx": {
       "artifactName": "${productName}-MS-Store-${version}-${arch}.${ext}",
       "applicationId": "HyperMimic",
-      "displayName": "HyperMimc",
+      "displayName": "HyperMimic",
       "identityName": "45747ThomasWeber.HyperMimicDesktop",
       "publisher": "CN=18FA7D4F-01BF-49F2-BF56-782DCEA49C69",
       "publisherDisplayName": "Clyain",
