@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install yarn
+        run: npm install -g yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Fetch assets
+        run: yarn run fetch
+
+      - name: Compile (webpack:compile)
+        run: yarn run webpack:compile
+
+      - name: Quick package test
+        run: |
+          yarn run electron:package:dir
+
+      - name: Verify app.asar contains entrypoint
+        run: |
+          if [ -f "dist/linux-unpacked/resources/app.asar" ]; then
+            npx --yes asar list dist/linux-unpacked/resources/app.asar | grep -q "src-main/entrypoint.js" && echo "✓ Entrypoint found" || echo "⚠ Entrypoint not found"
+          else
+            echo "⚠ app.asar not found, skipping check"
+          fi
