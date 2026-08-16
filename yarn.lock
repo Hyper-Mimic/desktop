@@ -1324,7 +1324,7 @@
 
 "@turbowarp/scratch-l10n@https://github.com/Hyper-Mimic/scratch-l10n#new":
   version "3.1001.202405101234"
-  resolved "https://github.com/Hyper-Mimic/scratch-l10n#f83ff3aa2e8d7b46837d666e6af862456b861bbb"
+  resolved "https://github.com/Hyper-Mimic/scratch-l10n#5d948d54fe2d567a11af5d1bbb790d937ac4b7f8"
   dependencies:
     "@babel/cli" "^7.1.2"
     "@babel/core" "^7.1.2"
@@ -7777,14 +7777,14 @@ schema-utils@^3.0.0:
 
 "scratch-blocks@https://github.com/Hyper-Mimic/scratch-blocks#develop":
   version "0.1.0"
-  resolved "https://github.com/Hyper-Mimic/scratch-blocks#446e298761310be27be1f3b2b324e3f2f3b8cf46"
+  resolved "https://github.com/Hyper-Mimic/scratch-blocks#9d70e109afe2093f5fcc196e5c211216ee50f5bb"
   dependencies:
     exports-loader "0.7.0"
     imports-loader "0.8.0"
 
 "scratch-gui@https://github.com/Hyper-Mimic/scratch-gui.git":
   version "3.2.37"
-  resolved "https://github.com/Hyper-Mimic/scratch-gui.git#1bbd720a4a0c0ef57287e23dcb4fbb8ff0733193"
+  resolved "https://github.com/Hyper-Mimic/scratch-gui.git#0ac91a6187f517b528743fc269ea3feb55ded9d8"
   dependencies:
     "@microbit/microbit-universal-hex" "0.2.2"
     "@turbowarp/jszip" "^3.11.1"
