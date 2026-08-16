@@ -1,6 +1,6 @@
-const PLATFORM_NAME = 'TurboWarp';
-const APP_NAME = 'TurboWarp Desktop';
-const PACKAGER_NAME = 'TurboWarp Packager';
+const PLATFORM_NAME = 'HyperMimic';
+const APP_NAME = 'HyperMimic Desktop';
+const PACKAGER_NAME = 'HyperMimic Packager';
 
 module.exports = {
   PLATFORM_NAME,
