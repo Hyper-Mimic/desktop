@@ -2,7 +2,7 @@
 
 HyperMimic as a desktop app.
 
-If you're looking for downloads, head to: https://clyain.netlify.app/hm-desktop
+If you're looking for downloads, head to: https://clyain.netlify.app/hm/desktop
 
 Licensed under the GPLv3.0. See LICENSE for more information.
 
