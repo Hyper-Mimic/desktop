@@ -25,7 +25,7 @@ jobs:
       with:
         node-version: 24
     - name: Install dependencies
-      run: yarn ci --loglevel=info
+      run: yarn install --frozen-lockfile --loglevel=info
     - name: Fetch
       run: yarn run fetch
     - name: Compile
