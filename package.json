@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "license": "GPL-3.0",
   "author": {
+    "email": "clyain@outlook.com",
     "name": "Clyain"
   },
   "type": "commonjs",
@@ -54,6 +55,7 @@
     "url": "https://github.com/Hyper-Mimic/desktop.git"
   },
   "bugs": {
+    "email": "clyain@outlook.com",
     "url": "https://github.com/Hyper-Mimic/desktop/issues"
   },
   "main": "./src-main/entrypoint.js",
