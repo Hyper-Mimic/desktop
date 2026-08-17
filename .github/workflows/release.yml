@@ -64,7 +64,7 @@ jobs:
       with:
         node-version: 24
     - name: Install dependencies
-      run: yarn ci --loglevel=info
+      run: yarn install --loglevel=info
     - name: Fetch
       run: yarn run fetch
     - name: Compile
@@ -141,7 +141,7 @@ jobs:
         npm config set prefix D:\npm-prefix
     - name: Install dependencies
       working-directory: D:\repo
-      run: yarn ci --loglevel=info
+      run: yarn install --loglevel=info
     - name: Fetch
       working-directory: D:\repo
       run: yarn run fetch
