@@ -38,8 +38,9 @@ jobs:
           dist/*.tar.gz
           dist/*.AppImage
 
-  build-mac:
+  release-mac:
     runs-on: macos-latest
+    if: github.event.inputs.platform == 'all' || github.event.inputs.platform == 'mac'
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -58,11 +59,18 @@ jobs:
       run: yarn run webpack:prod
     - name: Package
       run: |
-        # Need to run the universal builds as separate commands or it breaks when @electron/universal
-        # diffs the ASARs and finds spurious differences. Not clear why.
+        python3 -c "import os; open('authkey.p8', 'w').write(os.getenv('APPLE_API_KEY_DATA'))" >/dev/null 2>&1
+        export APPLE_API_KEY="$(pwd)/authkey.p8"
         node release-automation/build.mjs --mac --universal --production
         node release-automation/build.mjs --mac-legacy-11 --universal --production
-        node release-automation/build.mjs --mac-legacy-10.13-10.14 --mac-legacy-10.15 --x64
+        node release-automation/build.mjs --mac-legacy-10.13-10.14 --mac-legacy-10.15 --x64 --production
+        rm authkey.p8
+      env:
+        APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+        APPLE_API_KEY_DATA: ${{ secrets.APPLE_API_KEY_DATA }}
+        CSC_LINK: ${{ secrets.APPLE_CSC_LINK }}
+        CSC_KEY_PASSWORD: ${{ secrets.APPLE_CSC_KEY_PASSWORD }}
     - name: Print file tree
       run: node scripts/print-file-tree.mjs dist
     - name: Upload artifacts to GitHub Actions
@@ -70,6 +78,7 @@ jobs:
       with:
         name: mac
         path: dist/*.dmg
+        retention-days: 1
 
   build-windows:
     # GitHub's Windows runners have a C: drive and a D: drive.
