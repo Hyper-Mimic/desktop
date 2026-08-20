@@ -170,7 +170,7 @@
         };
 
         const changelog = document.querySelector('.update-log');
-        fetch(`https://clyain.netlify.app/hm/changelog.json?version=${info.latestVersion}`)
+        fetch(`https://clyain.netlify.app/hm/desktop/changelog.json?version=${info.latestVersion}`)
           .then((res) => {
             if (!res.ok) {
               throw new Error(`HTTP error ${res.status}`);

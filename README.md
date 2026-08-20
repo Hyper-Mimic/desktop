@@ -1,16 +1,18 @@
 # HyperMimic Desktop
 
+English | [简体中文](README_zh-cn.md)
+
 HyperMimic as a desktop app.
 
 If you're looking for downloads, head to: https://clyain.netlify.app/hm/desktop
 
 Licensed under the GPLv3.0. See LICENSE for more information.
 
-Parts of this repository are based on [LLK/scratch-desktop](https://github.com/LLK/scratch-desktop).
+Parts of this repository are based on [TurboWarp/desktop](https://github.com/TurboWarp/desktop) and [LLK/scratch-desktop](https://github.com/LLK/scratch-desktop).
 
 ## Website
 
-The website source code is in the `docs` folder.
+The website source code is in the `hm/desktop` folder of the `Clyain/clyain.netlify.app` repository.
 
 ## Development
 
@@ -114,11 +116,13 @@ You can typically only package for a certain operating system while on that oper
 
 ## Code signing policy
 
-HyperMimic Desktop uses a free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+HyperMimic Desktop HyperMimic continues the free code signing of TurboWarp Desktop.
+
+TurboWarp Desktop uses a free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
 
  * Approvers:
    * [GarboMuffin](https://github.com/GarboMuffin)
- * Privacy policy: https://clyain.netlify.app/hm/privacy.html
+ * Privacy policy: https://clyain.netlify.app/hm/desktop/privacy.html
 
 ## Advanced customizations
 
@@ -138,4 +142,4 @@ Create the file `userscript.js` in this folder to configure custom JS. Create th
 
 ## Uninstall
 
-See https://desktop.turbowarp.org/uninstall
+See https://clyain.netlify.app/hm/desktop/uninstall
