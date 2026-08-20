@@ -2,6 +2,12 @@ This document is the authoritative source for HyperMimic's changelogs. Everythin
 
 Prefix notes with "Windows:", "macOS:", or "Linux:" as needed. Do not use **formatting** or [links](https://clyain.netlify.app/hm).
 
+# 1.0.1 (2026-08-20)
+
+- 修复一些已知bug
+- 从AstraEditor引入插件“调试器（含新标签页）”、“显示FPS”、“拖动调整工具箱分类”、“书签”、“背景”、“待办”，并做出适当调整
+- 调整工作区右键菜单样式（后续会允许自定义样式）
+
 # 1.0.0 (2026-08-17)
 
  - 初始版本
