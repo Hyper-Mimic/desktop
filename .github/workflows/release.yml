@@ -1,7 +1,7 @@
 name: Release
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # ← 改为手动触发
     inputs:
       release_tag:
         description: 'Release tag (e.g., v1.0.0)'
@@ -22,208 +22,134 @@ on:
 permissions:
   contents: write
 
-env:
-  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
-
 jobs:
-  # ==========================================
-  # 统一构建阶段 - 只构建一次
-  # ==========================================
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          persist-credentials: false
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile --loglevel=info
-
-      - name: Fetch
-        run: yarn run fetch
-
-      - name: Compile
-        run: yarn run webpack:prod
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: |
-            dist/
-            !dist/*.deb
-            !dist/*.tar.gz
-            !dist/*.AppImage
-            !dist/*.dmg
-            !dist/*.exe
-            !dist/*.appx
-          retention-days: 1
-
-  # ==========================================
-  # Linux 打包
-  # ==========================================
   release-linux:
-    needs: build
     runs-on: ubuntu-latest
+    # 如果 platform 不是 all 或 linux，跳过这个 job
     if: github.event.inputs.platform == 'all' || github.event.inputs.platform == 'linux'
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          persist-credentials: false
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        persist-credentials: false
+    - name: Install strip-nondeterminism
+      run: sudo apt-get install strip-nondeterminism
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 24
+    - name: Install dependencies
+      run: yarn install --frozen-lockfile --loglevel=info
+    - name: Fetch
+      run: yarn run fetch
+    - name: Compile
+      run: yarn run webpack:prod
+    - name: Package
+      run: |
+        node release-automation/build.mjs --debian --tarball --appimage --x64 --armv7l --arm64 --production
+    - name: Print file tree
+      run: node scripts/print-file-tree.mjs dist
+    - name: Upload artifacts to GitHub Actions
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux
+        path: |
+          dist/*.deb
+          dist/*.tar.gz
+          dist/*.AppImage
+        retention-days: 1
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: .
-
-      - name: Install strip-nondeterminism
-        run: sudo apt-get install strip-nondeterminism
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Install dependencies (skip build)
-        run: yarn install --frozen-lockfile --loglevel=info --ignore-scripts
-
-      - name: Package
-        run: |
-          node release-automation/build.mjs --debian --tarball --appimage --x64 --armv7l --arm64 --production
-
-      - name: Print file tree
-        run: node scripts/print-file-tree.mjs dist
-
-      - name: Upload artifacts to GitHub Actions
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux
-          path: |
-            dist/*.deb
-            dist/*.tar.gz
-            dist/*.AppImage
-          retention-days: 1
-
-  # ==========================================
-  # Mac 打包
-  # ==========================================
   release-mac:
-    needs: build
     runs-on: macos-latest
     if: github.event.inputs.platform == 'all' || github.event.inputs.platform == 'mac'
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          persist-credentials: false
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        persist-credentials: false
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 24
+    - name: Install dependencies
+      run: yarn install --loglevel=info
+    - name: Fetch
+      run: yarn run fetch
+    - name: Compile
+      run: yarn run webpack:prod
+    - name: Package
+      run: |
+        python3 -c "import os; open('authkey.p8', 'w').write(os.getenv('APPLE_API_KEY_DATA'))" >/dev/null 2>&1
+        export APPLE_API_KEY="$(pwd)/authkey.p8"
+        node release-automation/build.mjs --mac --universal --production
+        node release-automation/build.mjs --mac-legacy-11 --universal --production
+        node release-automation/build.mjs --mac-legacy-10.13-10.14 --mac-legacy-10.15 --x64 --production
+        rm authkey.p8
+      env:
+        APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+        APPLE_API_KEY_DATA: ${{ secrets.APPLE_API_KEY_DATA }}
+        # CSC_LINK: ${{ secrets.APPLE_CSC_LINK }}
+        # CSC_KEY_PASSWORD: ${{ secrets.APPLE_CSC_KEY_PASSWORD }}
+        CSC_IDENTITY_AUTO_DISCOVERY: false
+    - name: Print file tree
+      run: node scripts/print-file-tree.mjs dist
+    - name: Upload artifacts to GitHub Actions
+      uses: actions/upload-artifact@v4
+      with:
+        name: mac
+        path: dist/*.dmg
+        retention-days: 1
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: .
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Install dependencies (skip build)
-        run: yarn install --frozen-lockfile --loglevel=info --ignore-scripts
-
-      - name: Package
-        run: |
-          python3 -c "import os; open('authkey.p8', 'w').write(os.getenv('APPLE_API_KEY_DATA'))" >/dev/null 2>&1
-          export APPLE_API_KEY="$(pwd)/authkey.p8"
-          node release-automation/build.mjs --mac --universal --production
-          node release-automation/build.mjs --mac-legacy-11 --universal --production
-          node release-automation/build.mjs --mac-legacy-10.13-10.14 --mac-legacy-10.15 --x64 --production
-          rm authkey.p8
-        env:
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_KEY_DATA: ${{ secrets.APPLE_API_KEY_DATA }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-
-      - name: Print file tree
-        run: node scripts/print-file-tree.mjs dist
-
-      - name: Upload artifacts to GitHub Actions
-        uses: actions/upload-artifact@v4
-        with:
-          name: mac
-          path: dist/*.dmg
-          retention-days: 1
-
-  # ==========================================
-  # Windows 打包
-  # ==========================================
   release-windows:
-    needs: build
     runs-on: windows-latest
     if: github.event.inputs.platform == 'all' || github.event.inputs.platform == 'windows'
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          persist-credentials: false
-          path: repo
-
-      - name: Move repository to D: drive
-        run: |
-          Copy-Item -Path repo -Destination D:\repo -Recurse
-          Remove-Item -Path repo -Recurse -Force
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: D:\repo\
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Configure yarn to use D: drive
-        run: |
-          yarn config set cache-folder D:\yarn-cache
-
-      - name: Install dependencies (skip build)
-        working-directory: D:\repo
-        run: yarn install --frozen-lockfile --loglevel=info --ignore-scripts
-
-      - name: Package
-        working-directory: D:\repo
-        run: |
-          node release-automation/build.mjs --windows --microsoft-store --x64 --ia32 --arm64 --production
-          node release-automation/build.mjs --windows-portable --x64 --production
-          node release-automation/build.mjs --windows-legacy --ia32 --x64 --production
-
-      - name: Print file tree
-        working-directory: D:\repo
-        run: node scripts/print-file-tree.mjs dist
-
-      - name: Upload artifacts to GitHub Actions
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        persist-credentials: false
+        path: repo
+    - name: "Move repository to D: drive"
+      run: |
+        Copy-Item -Path repo -Destination D:\repo -Recurse
+        Remove-Item -Path repo -Recurse -Force
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 24
+    - name: "Configure yarn to use D: drive"
+      run: |
+        yarn config set cache-folder D:\yarn-cache
+    - name: Install dependencies
+      working-directory: D:\repo
+      run: yarn install --loglevel=info
+    - name: Fetch
+      working-directory: D:\repo
+      run: yarn run fetch
+    - name: Compile
+      working-directory: D:\repo
+      run: yarn run webpack:prod
+    - name: Package
+      working-directory: D:\repo
+      run: |
+        node release-automation/build.mjs --windows --microsoft-store --x64 --ia32 --arm64 --production
+        node release-automation/build.mjs --windows-portable --x64 --production
+        node release-automation/build.mjs --windows-legacy --ia32 --x64 --production
+    - name: Print file tree
+      working-directory: D:\repo
+      run: node scripts/print-file-tree.mjs dist
+    - name: Upload artifacts to GitHub Actions
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows
         path: |
-            D:\repo\dist\*.exe
-            D:\repo\dist\*.appx
-          retention-days: 1
+          D:\repo\dist\*.exe
+          D:\repo\dist\*.appx
+        retention-days: 1
 
   # ==========================================
   # 上传到 GitHub Releases
@@ -231,6 +157,7 @@ jobs:
   upload-release:
     needs: [release-linux, release-mac, release-windows]
     runs-on: ubuntu-latest
+    # 只有当至少一个平台成功时才运行
     if: always() && !cancelled()
     steps:
       - name: Checkout
