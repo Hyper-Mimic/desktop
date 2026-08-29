@@ -4,7 +4,7 @@ const packageJSON = require('../package.json');
 const privilegedFetch = require('./fetch');
 
 const currentVersion = packageJSON.version;
-const URL = 'https://clyain.netlify.app/hm/desktop/version.json';
+const URL = 'https://hypermimic.netlify.app/desktop/version.json';
 
 /**
  * Determines whether the update checker is even allowed to be enabled

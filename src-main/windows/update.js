@@ -31,7 +31,7 @@ class UpdateWindow extends AbstractWindow {
       const params = new URLSearchParams();
       params.set('from', currentVersion);
       params.set('to', latestVersion);
-      openExternal(`https://clyain.netlify.app/hm/desktop/index.html/update_available?${params}`);
+      openExternal(`https://hypermimic.netlify.app/desktop/index.html/update_available?${params}`);
     });
 
     const ignore = (permanently) => {

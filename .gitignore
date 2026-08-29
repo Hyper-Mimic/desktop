@@ -3,6 +3,7 @@ thumbs.db
 node_modules/
 .idea/
 .vscode
+docs
 
 # Built files
 dist

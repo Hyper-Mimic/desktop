@@ -4,7 +4,7 @@
 
 HyperMimic 桌面应用程序。
 
-如需下载，请访问：https://clyain.netlify.app/hm/desktop
+如需下载，请访问：https://hypermimic.netlify.app/desktop
 
 基于 GPLv3.0 许可。详见 LICENSE 文件。
 
@@ -12,7 +12,7 @@ HyperMimic 桌面应用程序。
 
 ## 网站
 
-网站源代码位于 `Clyain/clyain.netlify.app` 仓库的 `hm/desktop` 文件夹中。
+网站源代码位于 `Hyper-Mimic/hypermimic.netlify.app` 仓库的 `desktop` 文件夹中。
 
 ## 开发
 
@@ -122,7 +122,7 @@ TurboWarp 桌面版使用由 [SignPath.io](https://about.signpath.io/) 提供的
 
 - 审批人：
   - [GarboMuffin](https://github.com/GarboMuffin)
-- 隐私政策：https://clyain.netlify.app/hm/desktop/privacy.html
+- 隐私政策：https://hypermimic.netlify.app/desktop/privacy.html
 
 ## 高级自定义
 
@@ -142,4 +142,4 @@ HyperMimic 桌面版允许您配置自定义 JS 和 CSS，而无需重新构建�
 
 ## 卸载
 
-参见 https://clyain.netlify.app/hm/desktop/uninstall
+参见 https://hypermimic.netlify.app/desktop/uninstall
