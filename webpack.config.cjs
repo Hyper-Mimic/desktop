@@ -25,6 +25,15 @@ const base = {
             },
             {
                 test: /\.css$/,
+                // The addon preview stylesheets use plain global classnames
+                // (JSX className strings and the original ScratchAddons .edm-*
+                // selectors must match verbatim), so they bypass CSS modules.
+                // Mirrors scratch-gui/webpack.config.js which excludes these
+                // two files from the modules:true rule below.
+                exclude: [
+                    /addons[\\/]preview[\\/]preview\.css$/,
+                    /playground[\\/]addon-preview\.css$/
+                ],
                 use: [
                     {
                         loader: 'style-loader'
@@ -36,6 +45,36 @@ const base = {
                             importLoaders: 1,
                             localIdentName: '[name]_[local]_[hash:base64:5]',
                             camelCase: true
+                        }
+                    },
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                            postcssOptions: {
+                                plugins: [
+                                    'postcss-import',
+                                    'postcss-simple-vars',
+                                    'autoprefixer'
+                                ]
+                            }
+                        }
+                    }
+                ]
+            },
+            {
+                // Plain (non-module) CSS for the addon previews so the global
+                // .edm-* / .apv-* classnames are preserved verbatim, matching
+                // the literal classNames used in the JSX/Vue templates.
+                test: /(?:addons[\\/]preview[\\/]preview\.css|playground[\\/]addon-preview\.css)$/,
+                use: [
+                    {
+                        loader: 'style-loader'
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                            modules: false,
+                            importLoaders: 1
                         }
                     },
                     {
@@ -111,6 +150,19 @@ module.exports = [
                     {
                         context: 'src-renderer-webpack/editor/addons/',
                         from: '*.html'
+                    },
+                    {
+                        from: 'node_modules/scratch-blocks/media',
+                        to: 'static/blocks-media/default'
+                    },
+                    {
+                        from: 'node_modules/scratch-blocks/media',
+                        to: 'static/blocks-media/high-contrast'
+                    },
+                    {
+                        from: 'node_modules/scratch-gui/src/lib/themes/blocks/high-contrast-media/blocks-media',
+                        to: 'static/blocks-media/high-contrast',
+                        force: true
                     }
                 ]
             })
