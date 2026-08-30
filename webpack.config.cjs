@@ -16,7 +16,22 @@ const base = {
                 }
             },
             {
+                // Only the custom-procedures option icons need to be base64 data
+                // URIs: recolor-custom-blocks does atob(iconElement.src) on them,
+                // which throws if file-loader emits them as file URLs. Scoping the
+                // inline to just these files keeps every other addon-page icon
+                // loading as a normal file URL (matches the previous behaviour).
+                test: /custom-procedures[\\/]icon--(?:text-input|boolean-input|label)\.svg$/,
+                loader: 'url-loader',
+                options: {
+                    limit: 2048,
+                    esModule: false
+                }
+            },
+            {
                 test: /\.(svg|png|wav|gif|jpg|mp3|woff2|hex)$/,
+                // Don't let file-loader also process the option icons above.
+                exclude: /custom-procedures[\\/]icon--(?:text-input|boolean-input|label)\.svg$/,
                 loader: 'file-loader',
                 options: {
                     outputPath: 'static/assets/',
