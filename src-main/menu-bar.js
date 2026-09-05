@@ -142,7 +142,7 @@ const rebuildMenuBar = () => {
           {
             label: translate('menu.learn-more'),
             click: () => {
-              openExternal('https://clyain.netlify.app/hm/desktop')
+              openExternal('https://hypermimic.netlify.app/desktop')
             }
           }
         ]
