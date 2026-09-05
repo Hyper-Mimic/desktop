@@ -1,11 +1,11 @@
 This document is the authoritative source for HyperMimic's changelogs. Everything else gets generated from this list by `node scripts/generate-changelogs.mjs`.
 
 Prefix notes with "Windows:", "macOS:", or "Linux:" as needed. Do not use **formatting** or [links](https://hypermimic.netlify.app/).
-# 1.0.6 (2026-08-29)
+# 1.0.6 (2026-09-5)
 
 - 修复已知bug
 - 优化变量管理器插件的加载速度
-- 
+- 修复语言切换时标题变空的bug
 
 # 1.0.5 (2026-08-29)
 
