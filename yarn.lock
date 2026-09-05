@@ -1270,7 +1270,7 @@
 
 "@turbowarp/extensions@TurboWarp/extensions#master":
   version "0.0.1"
-  resolved "https://codeload.github.com/TurboWarp/extensions/tar.gz/6aa9ab98c47bcdfb716dc6f08dc43c43c951c100"
+  resolved "https://codeload.github.com/TurboWarp/extensions/tar.gz/f33a7da9c8848e8490067e2b7ab75397dc8943a4"
   dependencies:
     "@turbowarp/json" "^0.1.2"
     "@turbowarp/scratchblocks" "^3.6.7"
@@ -7784,7 +7784,7 @@ schema-utils@^3.0.0:
 
 scratch-gui@Hyper-Mimic/scratch-gui.git:
   version "3.2.37"
-  resolved "https://codeload.github.com/Hyper-Mimic/scratch-gui/tar.gz/275d716e199caa990542e615d7256bbf8545e4e1"
+  resolved "https://codeload.github.com/Hyper-Mimic/scratch-gui/tar.gz/8e21bc40af0f4716141762816630597da3afadd3"
   dependencies:
     "@microbit/microbit-universal-hex" "0.2.2"
     "@turbowarp/jszip" "^3.11.1"
