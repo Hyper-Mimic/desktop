@@ -8,6 +8,7 @@
     "name": "Clyain"
   },
   "type": "commonjs",
+  "tw_update": true,
   "scripts": {
     "fetch": "node scripts/download-library-files.mjs && node scripts/download-packager.mjs && node scripts/prepare-extensions.mjs",
     "webpack:compile": "webpack",

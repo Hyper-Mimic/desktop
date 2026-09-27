@@ -56,6 +56,10 @@
         border-radius: 0.25rem;
         padding: 0.5rem;
       }
+      .check-for-updates-status {
+        margin: 0.5rem 0 0;
+        font-size: 0.9rem;
+      }
 
       [hidden] {
         display: none !important;
@@ -355,6 +359,7 @@
       <div class="button-row">
         <button class="open-user-data"></button>
         <button class="open-crash-dumps"></button>
+        <button class="check-for-updates-button"></button>
       </div>
       <script>
         const openUserData = document.querySelector('.open-user-data');
@@ -368,6 +373,57 @@
           DesktopSettingsPreload.openCrashDumps();
         });
         openCrashDumps.textContent = strings['desktop-settings.open-crash-dumps'];
+      </script>
+
+      <p class="check-for-updates-status" hidden></p>
+      <script>
+        const checkForUpdatesButton = document.querySelector('.check-for-updates-button');
+        const checkForUpdatesStatus = document.querySelector('.check-for-updates-status');
+
+        const setCheckForUpdatesStatus = (text, isError) => {
+          checkForUpdatesStatus.textContent = text;
+          checkForUpdatesStatus.classList.toggle('warning', isError);
+          checkForUpdatesStatus.hidden = false;
+        };
+
+        checkForUpdatesButton.addEventListener('click', async () => {
+          checkForUpdatesButton.disabled = true;
+          setCheckForUpdatesStatus(strings['desktop-settings.checking-for-updates'], false);
+
+          let result;
+          try {
+            result = await DesktopSettingsPreload.checkForUpdates();
+          } catch (error) {
+            console.error(error);
+            result = {status: 'error', error: `${error}`};
+          }
+
+          checkForUpdatesButton.disabled = false;
+
+          switch (result.status) {
+            case 'update-available':
+              // The update window is opened by the main process
+              setCheckForUpdatesStatus(
+                strings['desktop-settings.update-available'].replace('{version}', result.latestVersion),
+                false
+              );
+              break;
+            case 'up-to-date':
+              setCheckForUpdatesStatus(strings['desktop-settings.up-to-date'], false);
+              break;
+            case 'disabled':
+              setCheckForUpdatesStatus(strings['desktop-settings.update-checker-not-allowed'], false);
+              break;
+            default:
+              setCheckForUpdatesStatus(
+                strings['desktop-settings.check-for-updates-error'].replace('{error}', result.error),
+                true
+              );
+              break;
+          }
+        });
+
+        checkForUpdatesButton.textContent = strings['desktop-settings.check-for-updates'];
       </script>
     </main>
   </body>

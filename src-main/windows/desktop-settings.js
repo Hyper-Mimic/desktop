@@ -4,7 +4,7 @@ const AbstractWindow = require('./abstract');
 const {translate, getStrings, getLocale} = require('../l10n');
 const {APP_NAME} = require('../brand');
 const settings = require('../settings');
-const {isUpdateCheckerAllowed} = require('../update-checker');
+const {isUpdateCheckerAllowed, checkForUpdatesManually} = require('../update-checker');
 const RichPresence = require('../rich-presence');
 
 class DesktopSettingsWindow extends AbstractWindow {
@@ -40,6 +40,8 @@ class DesktopSettingsWindow extends AbstractWindow {
       settings.updateChecker = updateChecker;
       await settings.save();
     });
+
+    this.ipc.handle('check-for-updates', async () => checkForUpdatesManually());
 
     this.ipc.handle('set-crash-dumps', async (event, crashDumps) => {
       settings.crashDumps = crashDumps;

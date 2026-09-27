@@ -199,6 +199,26 @@
     "string": "Disabling the update checker is not recommended as you will not be notified about security updates.",
     "developer_comment": "Warning that appears in desktop settings when the update checker is disabled"
   },
+  "desktop-settings.check-for-updates": {
+    "string": "Check for Updates",
+    "developer_comment": "Button in desktop settings that manually checks for updates"
+  },
+  "desktop-settings.checking-for-updates": {
+    "string": "Checking for updates...",
+    "developer_comment": "Appears in desktop settings while a manual update check is running"
+  },
+  "desktop-settings.update-available": {
+    "string": "Update available: v{version}. The update window has been opened.",
+    "developer_comment": "Appears in desktop settings after a manual update check finds a newer version. {version} is replaced with the version number."
+  },
+  "desktop-settings.up-to-date": {
+    "string": "You are running the latest version.",
+    "developer_comment": "Appears in desktop settings after a manual update check finds no newer version"
+  },
+  "desktop-settings.check-for-updates-error": {
+    "string": "Could not check for updates: {error}",
+    "developer_comment": "Appears in desktop settings when a manual update check fails, for example due to no internet connection. {error} is replaced with the error message."
+  },
   "desktop-settings.microphone": {
     "string": "Selected Microphone",
     "developer_comment": "Label of dropdown to select active microphone"

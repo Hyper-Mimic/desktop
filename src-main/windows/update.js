@@ -2,6 +2,11 @@ const AbstractWindow = require('./abstract');
 const {translate, getLocale, getStrings} = require('../l10n');
 const {APP_NAME} = require('../brand');
 const openExternal = require('../open-external');
+const privilegedFetch = require('../fetch');
+
+const CHANGELOG_URL = 'https://hypermimic.netlify.app/desktop/changelog.json';
+const DOWNLOAD_PAGE_URL = 'https://hypermimic.netlify.app/desktop/#download';
+const BETA_RELEASES_URL = 'https://github.com/Hyper-Mimic/desktop/releases';
 
 class UpdateWindow extends AbstractWindow {
   constructor (currentVersion, latestVersion, security) {
@@ -28,10 +33,14 @@ class UpdateWindow extends AbstractWindow {
     this.ipc.handle('download', () => {
       this.window.destroy();
 
-      const params = new URLSearchParams();
-      params.set('from', currentVersion);
-      params.set('to', latestVersion);
-      openExternal(`https://hypermimic.netlify.app/desktop/index.html/update_available?${params}`);
+      // Go straight to the download section of the page instead of routing through the
+      // update_available.html redirector.
+      if (latestVersion.includes('-')) {
+        // Pre-releases are only published on GitHub
+        openExternal(BETA_RELEASES_URL);
+      } else {
+        openExternal(DOWNLOAD_PAGE_URL);
+      }
     });
 
     const ignore = (permanently) => {
@@ -65,6 +74,17 @@ class UpdateWindow extends AbstractWindow {
       ignore(false);
     });
 
+    // The changelog has to be fetched from the main process. Pages served over the custom
+    // tw-update:// scheme are non-standard, so their origin is opaque and a fetch() from the
+    // renderer is a cross-origin request. The host (Netlify) sends no Access-Control-Allow-Origin
+    // header, so that request fails with "TypeError: Failed to fetch". Node's https module
+    // isn't subject to CORS at all.
+    const changelog = privilegedFetch.json(`${CHANGELOG_URL}?version=${encodeURIComponent(latestVersion)}`)
+      .then((releases) => ({success: true, releases}))
+      .catch((error) => ({success: false, error: `${error}`}));
+
+    this.ipc.handle('get-changelog', () => changelog);
+
     this.window.webContents.on('did-finish-load', () => {
       this.show();
     });
@@ -88,7 +108,13 @@ class UpdateWindow extends AbstractWindow {
   }
 
   static updateAvailable (currentVersion, latestVersion, isSecurity) {
-    new UpdateWindow(currentVersion, latestVersion, isSecurity);
+    // A user can re-run the check from desktop settings, so make sure we never stack
+    // multiple update windows on top of each other. destroy() emits 'closed' but not
+    // 'close', so this won't mark the update as ignored.
+    for (const existing of AbstractWindow.getWindowsByClass(UpdateWindow)) {
+      existing.window.destroy();
+    }
+    return new UpdateWindow(currentVersion, latestVersion, isSecurity);
   }
 }
 

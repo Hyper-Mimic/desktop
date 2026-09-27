@@ -170,13 +170,44 @@
         };
 
         const changelog = document.querySelector('.update-log');
-        fetch(`https://hypermimic.netlify.app/desktop/changelog.json?version=${info.latestVersion}`)
-          .then((res) => {
-            if (!res.ok) {
-              throw new Error(`HTTP error ${res.status}`);
-            }
-            return res.json();
-          })
+
+        // The request is normally performed by the main process. Pages on the tw-update:// scheme
+        // have an opaque origin, so a fetch() from this window counts as cross-origin and gets
+        // rejected when the host sends no Access-Control-Allow-Origin header, which surfaces as
+        // "TypeError: Failed to fetch". Node's https module has no CORS, so the main process is
+        // the only reliable place to do this.
+        // directFetchChangelog() is kept as a fallback for a main process that is older than this
+        // IPC channel (for example when only the renderer was reloaded).
+        const directFetchChangelog = () => fetch(
+          `https://hypermimic.netlify.app/desktop/changelog.json?version=${info.latestVersion}`
+        ).then((res) => {
+          if (!res.ok) {
+            throw new Error(`HTTP error ${res.status}`);
+          }
+          return res.json();
+        });
+
+        const loadChangelog = () => {
+          if (typeof UpdatePreload.getChangelog !== 'function') {
+            return directFetchChangelog();
+          }
+
+          return UpdatePreload.getChangelog()
+            .then((result) => {
+              if (!result.success) {
+                throw new Error(result.error);
+              }
+              return result.releases;
+            })
+            .catch((error) => {
+              if (`${error}`.includes('No handler registered')) {
+                return directFetchChangelog();
+              }
+              throw error;
+            });
+        };
+
+        loadChangelog()
           .then((allReleases) => {
             removeChildren(changelog);
 
