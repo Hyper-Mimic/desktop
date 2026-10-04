@@ -26,25 +26,19 @@
         background-color: #333;
         color: white;
       }
-      .splash-spinner:after {
-        content: " ";
-        display: block;
-        width: 64px;
-        height: 64px;
-        border-radius: 50%;
-        border: 6px solid;
-        border-color: currentColor transparent currentColor transparent;
-        animation: splash-spinner 1.2s linear infinite;
-      }
-      @keyframes splash-spinner {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
     </style>
   </head>
   <body>
     <div class="splash-screen" id="spash-waiting-for-js" hidden>
-      <div class="splash-spinner"></div>
+      <!--
+        Filled in at build time by the CopyWebpackPlugin transform in webpack.config.cjs, from the
+        <style> + <svg> fragment that scratch-gui owns (src/playground/splash-logo.js, generated
+        from stroke.svg by .workbuddy/preview/splash-logo/gen.py). Do not paste the fragment in
+        here: this repo reads the editor's shared pieces straight out of the installed scratch-gui,
+        and a copy would drift from the web build. Inks currentColor, so the splash's white text
+        colour is what draws it.
+      -->
+      <!--splash-logo-->
     </div>
 
     <script>

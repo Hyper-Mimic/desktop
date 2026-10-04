@@ -139,7 +139,36 @@ module.exports = [
                     },
                     {
                         context: 'src-renderer-webpack/editor/gui/',
-                        from: '*.html'
+                        from: '*.html',
+                        // gui.html is copied verbatim except for its splash logo. That fragment is
+                        // generated -- scratch-gui's src/playground/splash-logo.js, produced from
+                        // stroke.svg by .workbuddy/preview/splash-logo/gen.py -- and this repo takes
+                        // every shared piece of the editor from the installed scratch-gui already, so
+                        // requiring it keeps one source of truth instead of a copy that drifts
+                        // (scratch-gui's own webpack config injects the same module through
+                        // html-webpack-plugin instead; there is no such plugin here).
+                        transform (content, absoluteFrom) {
+                            if (!absoluteFrom.endsWith('gui.html')) return content;
+                            const PLACEHOLDER = '<!--splash-logo-->';
+                            const html = content.toString();
+                            if (!html.includes(PLACEHOLDER)) {
+                                throw new Error(
+                                    'gui.html does not contain ' + PLACEHOLDER + ' any more. Restore it, ' +
+                                    'or remove the transform in webpack.config.cjs -- otherwise the splash ' +
+                                    'screen ships with no logo, silently.'
+                                );
+                            }
+                            let fragment;
+                            try {
+                                fragment = require('scratch-gui/src/playground/splash-logo.js');
+                            } catch (e) {
+                                throw new Error(
+                                    'Could not read the splash logo from the installed scratch-gui ' +
+                                    '(src/playground/splash-logo.js): ' + e.message
+                                );
+                            }
+                            return html.replace(PLACEHOLDER, fragment);
+                        }
                     }
                 ]
             })
