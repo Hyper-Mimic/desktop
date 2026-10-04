@@ -18,3 +18,47 @@ a {
 p {
   margin: 0;
 }
+
+/* The "See Project Page" button (addon desktop-project-page-button) switches the GUI into player
+   mode, which renders nothing but the stage: scratch-gui's components/gui/gui.jsx takes the
+   isPlayerOnly branch. The website wraps that in playground/render-interface.jsx (whose
+   isHomepage branch supplies the menu bar, the project ID input, the description and the
+   featured-projects wall); the desktop mounts scratch-gui's library entry and never imports that
+   file, so it rebuilds just the layout and the menu bar here. */
+
+/* The website centers the bare <StageWrapper> with playground/interface.css
+   (.container > .center { margin: auto }). The desktop's #app is position:absolute at 100%x100%,
+   so the stage would otherwise sit in the top-left corner at its natural 480x360 size while
+   .stage-header-wrapper (position:absolute; right:0) anchors to the far right of the window.
+   A column flex box with a centered row for the stage shrink-wraps .stage-wrapper around the
+   stage, which also re-anchors the header to the stage's own right edge. */
+.projectViewContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: auto;
+}
+.projectViewContainer > * {
+  flex-shrink: 0;
+}
+.projectViewStageRow {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
+.projectViewMenuBar {
+  position: relative;
+  /* Matches scratch-gui's components/gui/gui.css .menu-bar-position, which the editor layout
+     passes to the in-editor MenuBar via the className prop. $z-index-menu-bar is 491: over
+     monitors, alerts and tutorials. */
+  z-index: 491;
+  flex-shrink: 0;
+  width: 100%;
+}
