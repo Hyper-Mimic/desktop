@@ -64,7 +64,7 @@
     "electronDownload": {
       "mirror": "https://npmmirror.com/mirrors/electron/"
     },
-    "appId": "org.HyperMimic.desktop",
+    "appId": "org.hypermimic.HyperMimic",
     "productName": "HyperMimic",
     "files": [
       "node_modules/**/*",
@@ -120,7 +120,8 @@
       "artifactName": "${productName}-Setup-${version}-${arch}.${ext}",
       "oneClick": false,
       "deleteAppDataOnUninstall": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "guid": "E2F8DB5D-C331-5567-B0E4-361B1EC8786F"
     },
     "mac": {
       "artifactName": "${productName}-Setup-${version}.${ext}",
