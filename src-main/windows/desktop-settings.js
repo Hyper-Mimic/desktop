@@ -1,9 +1,10 @@
 const fsPromises = require('fs/promises');
-const {app, shell} = require('electron');
+const {app, dialog, shell} = require('electron');
 const AbstractWindow = require('./abstract');
 const {translate, getStrings, getLocale} = require('../l10n');
 const {APP_NAME} = require('../brand');
 const settings = require('../settings');
+const prompts = require('../prompts');
 const {isUpdateCheckerAllowed, checkForUpdatesManually} = require('../update-checker');
 const RichPresence = require('../rich-presence');
 
@@ -113,56 +114,55 @@ class DesktopSettingsWindow extends AbstractWindow {
     this.ipc.handle('set-menu-bar-in-title-bar', async (event, menuBarInTitleBar) => {
       const supported = process.platform === 'win32' || process.platform === 'linux';
       if (menuBarInTitleBar && !supported) {
-        return {recreated: 0, skipped: 0, unsupported: true};
+        return {recreated: 0, cancelled: false, unsupported: true};
       }
 
       const nextValue = !!menuBarInTitleBar;
       if (settings.menuBarInTitleBar === nextValue) {
         // Nothing actually changed, so don't disturb the user's windows.
-        return {recreated: 0, skipped: 0, unsupported: false};
+        return {recreated: 0, cancelled: false, unsupported: false};
       }
 
       // Imported late due to circular dependencies: windows/editor.js requires this file.
       const EditorWindow = require('./editor');
-      // The list is taken once, before any prompt: a window cannot be closed while its own prompt is
-      // up, but quitting the app takes them all away, so the loops below re-check.
       const editorWindows = AbstractWindow.getWindowsByClass(EditorWindow);
 
-      // Ask about every window that would lose work before anything is touched, so that answering
-      // "stay" anywhere still cancels the whole change. Applying it to the rest of the windows and
-      // leaving that one behind would leave the setting claiming something that is not true of every
-      // window on screen -- and the window that stayed would have no way to catch up later. The
-      // prompts are awaited one at a time so they cannot stack up unreadably.
-      let skipped = 0;
-      for (const editorWindow of editorWindows) {
-        if (editorWindow.window.isDestroyed()) {
-          continue;
+      // Rebuilding a window throws away whatever has not been saved in it, so the user is asked
+      // first. One prompt covers them all: the question is about the setting they just flipped, not
+      // about any one window, and it is asked here -- on the settings window, where the click was --
+      // rather than on an editor window they may not even be looking at. It is the very same prompt
+      // closing an editor window puts up (prompts.getUnsavedChangesOptions), so the two cannot drift
+      // apart; only the call differs, this being an async handler rather than a synchronous OS event
+      // (compare the comment on the close path in windows/editor.js).
+      const hasUnsavedChanges = editorWindows.some(
+        editorWindow => !editorWindow.window.isDestroyed() && editorWindow.hasUnsavedChanges
+      );
+      if (hasUnsavedChanges) {
+        const choice = await dialog.showMessageBox(this.window, prompts.getUnsavedChangesOptions());
+        if (choice.response !== 1) {
+          // "Stay" means do not reopen anything, so nothing is applied at all -- not even the
+          // setting, which would otherwise claim a change that no window on screen has.
+          return {recreated: 0, cancelled: true, unsupported: false};
         }
-        if (!await editorWindow.confirmRecreate()) {
-          skipped++;
-        }
-      }
-      if (skipped > 0) {
-        // Nothing was applied, not even the setting.
-        return {recreated: 0, skipped, unsupported: false};
       }
 
-      // Only now, with every window accounted for, is the setting worth changing: titleBarStyle /
-      // titleBarOverlay are BrowserWindow constructor options, so the change takes effect on a new
-      // window and the rebuilt ones below read it at construction.
+      // Only now is the setting worth changing: titleBarStyle / titleBarOverlay are BrowserWindow
+      // constructor options, so it takes effect on a new window, and the ones below read it at
+      // construction. Saving before them matters for that reason.
       settings.menuBarInTitleBar = nextValue;
       await settings.save();
 
       // Rebuild them now instead of making the user restart, re-opening whatever file each one had.
       let recreated = 0;
       for (const editorWindow of editorWindows) {
+        // The list is from before the prompt, and quitting the app takes the windows away.
         if (editorWindow.window.isDestroyed()) {
           continue;
         }
         editorWindow.recreate();
         recreated++;
       }
-      return {recreated, skipped: 0, unsupported: false};
+      return {recreated, cancelled: false, unsupported: false};
     });
 
     this.ipc.handle('open-user-data', async () => {
