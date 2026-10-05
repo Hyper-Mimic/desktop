@@ -353,13 +353,13 @@
           menuBarInTitleBarRow.hidden = false;
           menuBarInTitleBar.checked = settings.menuBarInTitleBar;
           menuBarInTitleBar.onchange = async () => {
-            const wasChecked = menuBarInTitleBar.checked;
-            // The window is rebuilt synchronously on the main side, so disable the checkbox while
-            // that happens to keep the click from queuing several rebuilds.
+            // Disable the checkbox for the whole round trip: the main side answers only after it has
+            // rebuilt every editor window, which includes any unsaved-changes prompts it has to put
+            // up, so a second click in the meantime would queue another rebuild.
             menuBarInTitleBar.disabled = true;
             let result;
             try {
-              result = await DesktopSettingsPreload.setMenuBarInTitleBar(wasChecked);
+              result = await DesktopSettingsPreload.setMenuBarInTitleBar(menuBarInTitleBar.checked);
             } catch (error) {
               console.error(error);
               result = {recreated: 0, skipped: 0, unsupported: false};
@@ -372,10 +372,10 @@
               return;
             }
             if (result.skipped > 0) {
-              // Some windows have unsaved changes and were left alone. Reflect the truth: the
-              // stored setting is already flipped, so the checkbox would otherwise claim the
-              // merge is active when those windows still have the old title bar.
-              menuBarInTitleBar.checked = !wasChecked;
+              // A skipped window is one the user chose to keep open at the Stay/Leave prompt, so the
+              // stored setting really is inverted and the checkbox stays as they set it -- rolling it
+              // back would claim the setting is off when it is on. All that is left to say is that
+              // those windows still have the old title bar.
               menuBarInTitleBarWarning.hidden = false;
               menuBarInTitleBarWarning.textContent = strings['desktop-settings.menu-bar-in-title-bar-unsaved'];
             } else {
