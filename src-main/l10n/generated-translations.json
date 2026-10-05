@@ -1888,6 +1888,9 @@
         "update.permanently-ignore": "忽略此次更新",
         "update.security-description": "{appNameVersion} 现在可用。此版本包含了安全补丁。强烈建议更新。",
         "update.security-title": "安全更新可用",
-        "update.window-title": "更新可用"
+        "update.window-title": "更新可用",
+        "desktop-settings.menu-bar-in-title-bar": "将菜单栏融合到窗口标题栏",
+        "desktop-settings.menu-bar-in-title-bar-unsaved": "部分编辑器窗口有未保存的改动，无法重新打开。请先保存它们，然后关闭再开启此选项以应用到这些窗口；否则将在下次启动应用时生效。",
+        "desktop-settings.menu-bar-in-title-bar-unsupported": "当前平台不支持此功能。"
     }
 }

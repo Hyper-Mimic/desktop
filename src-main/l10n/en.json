@@ -522,5 +522,17 @@
   "extension-documentation.title": {
     "string": "{APP_NAME} Extension Documentation",
     "developer_comment": "Title of in-app window for viewing extension documentation."
+  },
+  "desktop-settings.menu-bar-in-title-bar": {
+    "string": "Merge the menu bar into the window title bar",
+    "developer_comment": "Option to hide the OS title bar and draw the window controls on the right end of the editor's menu bar instead. Windows and Linux only."
+  },
+  "desktop-settings.menu-bar-in-title-bar-unsaved": {
+    "string": "Some editor windows have unsaved changes and could not be reopened. Save them, then turn this off and on again to apply the change there. Otherwise it will apply the next time you open the app.",
+    "developer_comment": "Warning shown when the merged title bar could not be applied to every open editor window because some of them have unsaved changes."
+  },
+  "desktop-settings.menu-bar-in-title-bar-unsupported": {
+    "string": "This is not supported on this platform.",
+    "developer_comment": "Warning shown when the merged title bar was requested on a platform that does not support it. The option is hidden on macOS, so this is a fallback."
   }
 }

@@ -184,6 +184,19 @@ class Settings {
   set richPresence (richPresence) {
     this.data.richPresence = richPresence;
   }
+
+  /**
+   * Merge the editor's menu bar into the window title bar: hide the OS title bar and let the
+   * window controls sit on the right end of the menu bar (titleBarStyle: 'hidden' +
+   * titleBarOverlay). Windows and Linux only -- macOS has a different title bar model and its
+   * traffic lights would collide with the menu bar, so the setting is hidden there.
+   */
+  get menuBarInTitleBar () {
+    return this.data.menuBarInTitleBar === true;
+  }
+  set menuBarInTitleBar (menuBarInTitleBar) {
+    this.data.menuBarInTitleBar = menuBarInTitleBar;
+  }
 }
 
 module.exports = new Settings();
