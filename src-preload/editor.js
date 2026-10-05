@@ -2,6 +2,16 @@ const {contextBridge, ipcRenderer} = require('electron');
 
 contextBridge.exposeInMainWorld('EditorPreload', {
   isInitiallyFullscreen: () => ipcRenderer.sendSync('is-initially-fullscreen'),
+  getTitlebarState: () => ipcRenderer.sendSync('get-titlebar-state'),
+  minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
+  toggleMaximizeWindow: () => ipcRenderer.invoke('toggle-maximize-window'),
+  closeWindow: () => ipcRenderer.invoke('close-window'),
+  isMaximized: () => ipcRenderer.invoke('is-maximized'),
+  onMaximizeChanged: (callback) => {
+    const listener = (event, isMaximized) => callback(isMaximized);
+    ipcRenderer.on('maximize-state-changed', listener);
+    return () => ipcRenderer.removeListener('maximize-state-changed', listener);
+  },
   getInitialFile: () => ipcRenderer.invoke('get-initial-file'),
   getFile: (id) => ipcRenderer.invoke('get-file', id),
   openedFile: (id) => ipcRenderer.invoke('opened-file', id),

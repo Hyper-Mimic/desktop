@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('DesktopSettingsPreload', {
   setSpellchecker: (spellchecker) => ipcRenderer.invoke('set-spellchecker', spellchecker),
   setExitFullscreenOnEscape: (exitFullscreenOnEscape) => ipcRenderer.invoke('set-exit-fullscreen-on-escape', exitFullscreenOnEscape),
   setRichPresence: (richPresence) => ipcRenderer.invoke('set-rich-presence', richPresence),
+  setMenuBarInTitleBar: (menuBarInTitleBar) => ipcRenderer.invoke('set-menu-bar-in-title-bar', menuBarInTitleBar),
   setCrashDumps: (crashDumps) => ipcRenderer.invoke('set-crash-dumps', crashDumps),
   openUserData: () => ipcRenderer.invoke('open-user-data'),
   openCrashDumps: () => ipcRenderer.invoke('open-crash-dumps')
