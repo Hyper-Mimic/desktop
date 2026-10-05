@@ -710,34 +710,41 @@ class EditorWindow extends ProjectRunningWindow {
   }
 
   /**
+   * Ask whether this window may be replaced, i.e. whether any unsaved work in it may be discarded.
+   *
+   * Purposefully does not touch the window: the caller asks every window first and only then decides
+   * what to do, because one "stay" cancels the change for all of them (see
+   * set-menu-bar-in-title-bar in windows/desktop-settings.js). Replacing the other windows anyway
+   * would leave the setting claiming something that is not true of every window on screen.
+   *
+   * The prompt is the very same one closing a window puts up (prompts.getUnsavedChangesOptions), so
+   * the two cannot drift apart. Only the call differs: this runs from an async IPC handler, so it
+   * can await the dialog instead of needing the timeout the close path uses for focus (see the
+   * comment on that handler).
+   *
+   * Whether there is anything to lose comes from hasUnsavedChanges, not from the window; see what is
+   * written where that field is set for why the window's own flag is not usable here.
+   *
+   * @returns {Promise<boolean>} false if the user chose to stay
+   */
+  async confirmRecreate () {
+    if (!this.hasUnsavedChanges) {
+      return true;
+    }
+    const choice = await dialog.showMessageBox(this.window, prompts.getUnsavedChangesOptions());
+    return choice.response === 1;
+  }
+
+  /**
    * Replace this window with a fresh one, re-opening the file it currently has open.
    *
    * titleBarStyle / titleBarOverlay can only be set when the BrowserWindow is constructed, so
    * toggling the merged title bar means recreating the window. The replacement re-opens the same
-   * file, so a saved project comes back as it was; unsaved work cannot, so the user is asked first
-   * with the very same prompt closing a window puts up (prompts.getUnsavedChangesOptions), and
-   * "Stay" leaves this window alone.
-   *
-   * That prompt object is shared rather than this going through the close path itself, because the
-   * close path is driven by the renderer's beforeunload handler vetoing a close and ends in
-   * window.destroy() -- with nothing to put a replacement window up afterwards, and no way to report
-   * the answer back to the caller, which needs it to tell the settings page how many windows were
-   * left alone. Only the call differs: this runs from an async IPC handler, so it can await the
-   * dialog instead of needing the timeout the close path uses for focus (see its comment).
-   *
-   * Whether there is anything to lose comes from hasUnsavedChanges, not from the window: see what is
-   * written where that field is set for why the window's own flag is not usable here.
-   *
-   * @returns {Promise<boolean>} false if the window was left alone, i.e. the user chose to stay
+   * file, which is what makes this safe to do while the user is working, as long as the unsaved
+   * changes have been accounted for: confirmRecreate() must have been asked and answered with
+   * "leave" first, since anything unsaved is gone for good otherwise.
    */
-  async recreate () {
-    if (this.hasUnsavedChanges) {
-      const choice = await dialog.showMessageBox(this.window, prompts.getUnsavedChangesOptions());
-      if (choice.response !== 1) {
-        return false;
-      }
-    }
-
+  recreate () {
     // Grab everything we need from this window before tearing it down. The bounds are handed to
     // the replacement's constructor so it is positioned before it is shown; otherwise it would
     // briefly appear at the default centered position first.
@@ -753,7 +760,6 @@ class EditorWindow extends ProjectRunningWindow {
     if (wasMaximized) {
       replacement.window.maximize();
     }
-    return true;
   }
 
   updateRichPresence () {

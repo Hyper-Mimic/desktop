@@ -353,13 +353,14 @@
           menuBarInTitleBarRow.hidden = false;
           menuBarInTitleBar.checked = settings.menuBarInTitleBar;
           menuBarInTitleBar.onchange = async () => {
+            const wasChecked = menuBarInTitleBar.checked;
             // Disable the checkbox for the whole round trip: the main side answers only after it has
-            // rebuilt every editor window, which includes any unsaved-changes prompts it has to put
-            // up, so a second click in the meantime would queue another rebuild.
+            // asked every editor window about unsaved changes, so a second click in the meantime
+            // would queue another round.
             menuBarInTitleBar.disabled = true;
             let result;
             try {
-              result = await DesktopSettingsPreload.setMenuBarInTitleBar(menuBarInTitleBar.checked);
+              result = await DesktopSettingsPreload.setMenuBarInTitleBar(wasChecked);
             } catch (error) {
               console.error(error);
               result = {recreated: 0, skipped: 0, unsupported: false};
@@ -372,10 +373,10 @@
               return;
             }
             if (result.skipped > 0) {
-              // A skipped window is one the user chose to keep open at the Stay/Leave prompt, so the
-              // stored setting really is inverted and the checkbox stays as they set it -- rolling it
-              // back would claim the setting is off when it is on. All that is left to say is that
-              // those windows still have the old title bar.
+              // A skipped window is one the user chose to keep open, which cancels the change for
+              // every window -- so the setting was never flipped and the checkbox has to follow it
+              // back to where it was.
+              menuBarInTitleBar.checked = !wasChecked;
               menuBarInTitleBarWarning.hidden = false;
               menuBarInTitleBarWarning.textContent = strings['desktop-settings.menu-bar-in-title-bar-unsaved'];
             } else {

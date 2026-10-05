@@ -116,41 +116,53 @@ class DesktopSettingsWindow extends AbstractWindow {
         return {recreated: 0, skipped: 0, unsupported: true};
       }
 
-      const wasEnabled = settings.menuBarInTitleBar;
-      settings.menuBarInTitleBar = !!menuBarInTitleBar;
-      await settings.save();
-
-      if (wasEnabled === settings.menuBarInTitleBar) {
+      const nextValue = !!menuBarInTitleBar;
+      if (settings.menuBarInTitleBar === nextValue) {
         // Nothing actually changed, so don't disturb the user's windows.
         return {recreated: 0, skipped: 0, unsupported: false};
       }
 
-      // titleBarStyle / titleBarOverlay are BrowserWindow constructor options, so the change only
-      // takes effect on a new window. Recreate them now instead of making the user restart, and
-      // re-open whatever file each one had. A window with unsaved changes gets a Stay/Leave prompt
-      // of its own first (recreate() puts it up and reports back false for "stay"), so toggling this
-      // can never lose work silently -- the caller counts how many were left alone so the settings
-      // page can say that those still have the old title bar.
-      //
       // Imported late due to circular dependencies: windows/editor.js requires this file.
       const EditorWindow = require('./editor');
+      // The list is taken once, before any prompt: a window cannot be closed while its own prompt is
+      // up, but quitting the app takes them all away, so the loops below re-check.
       const editorWindows = AbstractWindow.getWindowsByClass(EditorWindow);
-      let recreated = 0;
+
+      // Ask about every window that would lose work before anything is touched, so that answering
+      // "stay" anywhere still cancels the whole change. Applying it to the rest of the windows and
+      // leaving that one behind would leave the setting claiming something that is not true of every
+      // window on screen -- and the window that stayed would have no way to catch up later. The
+      // prompts are awaited one at a time so they cannot stack up unreadably.
       let skipped = 0;
       for (const editorWindow of editorWindows) {
-        // The list is from before the first prompt, and the prompts are awaited one at a time so
-        // that several of them cannot stack up unreadably. A window cannot be closed while its own
-        // prompt is up, but quitting the app takes them all away, so re-check.
         if (editorWindow.window.isDestroyed()) {
           continue;
         }
-        if (await editorWindow.recreate()) {
-          recreated++;
-        } else {
+        if (!await editorWindow.confirmRecreate()) {
           skipped++;
         }
       }
-      return {recreated, skipped, unsupported: false};
+      if (skipped > 0) {
+        // Nothing was applied, not even the setting.
+        return {recreated: 0, skipped, unsupported: false};
+      }
+
+      // Only now, with every window accounted for, is the setting worth changing: titleBarStyle /
+      // titleBarOverlay are BrowserWindow constructor options, so the change takes effect on a new
+      // window and the rebuilt ones below read it at construction.
+      settings.menuBarInTitleBar = nextValue;
+      await settings.save();
+
+      // Rebuild them now instead of making the user restart, re-opening whatever file each one had.
+      let recreated = 0;
+      for (const editorWindow of editorWindows) {
+        if (editorWindow.window.isDestroyed()) {
+          continue;
+        }
+        editorWindow.recreate();
+        recreated++;
+      }
+      return {recreated, skipped: 0, unsupported: false};
     });
 
     this.ipc.handle('open-user-data', async () => {
