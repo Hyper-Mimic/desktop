@@ -10,6 +10,8 @@ const windowsByClass = new Map();
  * @typedef AbstractWindowOptions
  * @property {Electron.BrowserWindow} [existingWindow]
  * @property {Electron.BrowserWindow} [parentWindow]
+ * @property {Electron.Rectangle} [bounds] Explicit bounds, used when replacing a window so the
+ * new one appears where the old one was instead of flashing at the default position first.
  */
 
 class AbstractWindow {
@@ -23,20 +25,24 @@ class AbstractWindow {
     this.applySettings();
 
     if (!options.existingWindow) {
-      // getCursorScreenPoint() segfaults on Linux in Wayland if called before a BrowserWindow is created, so
-      // we can't compute this in getWindowOptions().
-      // https://github.com/electron/electron/issues/35471
-      let bounds;
-      if (this.parentWindow) {
-        options.parent = this.parentWindow;
-        bounds = AbstractWindow.calculateWindowBounds(this.parentWindow.getBounds(), this.getDimensions());
+      if (options.bounds) {
+        this.window.setBounds(options.bounds);
       } else {
-        // Electron's default window placement handles multimonitor setups extremely poorly on Linux
-        // This also makes the window open on whatever monitor the mouse is on, which is probably what the user wants
-        const activeScreen = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-        bounds = AbstractWindow.calculateWindowBounds(activeScreen.workArea, this.getDimensions());
+        // getCursorScreenPoint() segfaults on Linux in Wayland if called before a BrowserWindow is created, so
+        // we can't compute this in getWindowOptions().
+        // https://github.com/electron/electron/issues/35471
+        let bounds;
+        if (this.parentWindow) {
+          options.parent = this.parentWindow;
+          bounds = AbstractWindow.calculateWindowBounds(this.parentWindow.getBounds(), this.getDimensions());
+        } else {
+          // Electron's default window placement handles multimonitor setups extremely poorly on Linux
+          // This also makes the window open on whatever monitor the mouse is on, which is probably what the user wants
+          const activeScreen = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+          bounds = AbstractWindow.calculateWindowBounds(activeScreen.workArea, this.getDimensions());
+        }
+        this.window.setBounds(bounds);
       }
-      this.window.setBounds(bounds);
     }
 
     /**

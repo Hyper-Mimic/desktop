@@ -20,6 +20,12 @@ const RichPresence = require('../rich-presence.js');
 const FileAccessWindow = require('./file-access-window.js');
 const ExtensionDocumentationWindow = require('./extension-documentation.js');
 
+/**
+ * macOS keeps a different title bar model (traffic lights, no titleBarOverlay), so merging the
+ * menu bar into the title bar is Windows/Linux only.
+ */
+const isMenuBarInTitleBarSupported = process.platform === 'win32' || process.platform === 'linux';
+
 const TYPE_FILE = 'file';
 const TYPE_URL = 'url';
 const TYPE_SCRATCH = 'scratch';
@@ -215,9 +221,10 @@ class EditorWindow extends ProjectRunningWindow {
   /**
    * @param {OpenedFile|null} initialFile
    * @param {boolean} isInitiallyFullscreen
+   * @param {Electron.Rectangle} [bounds] Explicit bounds, used by recreate().
    */
-  constructor (initialFile, isInitiallyFullscreen) {
-    super();
+  constructor (initialFile, isInitiallyFullscreen, bounds) {
+    super({bounds});
 
     /**
      * Ideally we would revoke access after loading a new project, but our file handle handling in
@@ -305,6 +312,45 @@ class EditorWindow extends ProjectRunningWindow {
     this.ipc.on('is-initially-fullscreen', (e) => {
       e.returnValue = isInitiallyFullscreen;
     });
+
+    this.ipc.on('get-titlebar-state', (e) => {
+      e.returnValue = {
+        // The GUI can only draw its own buttons if the OS title bar is hidden, which is the same
+        // condition as the setting being on.
+        active: settings.menuBarInTitleBar,
+        supported: isMenuBarInTitleBarSupported
+      };
+    });
+
+    this.ipc.handle('minimize-window', () => {
+      this.window.minimize();
+    });
+
+    this.ipc.handle('toggle-maximize-window', () => {
+      if (this.window.isMaximized()) {
+        this.window.unmaximize();
+      } else {
+        this.window.maximize();
+      }
+    });
+
+    this.ipc.handle('close-window', () => {
+      this.window.close();
+    });
+
+    this.ipc.handle('is-maximized', () => this.window.isMaximized());
+
+    // The GUI draws its own maximize/restore glyph, so it has to be told when that flips. Listening
+    // on the window covers double-click on the desktop, the taskbar, snap layouts and the keyboard.
+    const sendMaximizeState = () => {
+      if (!this.window.isDestroyed()) {
+        this.window.webContents.send('maximize-state-changed', this.window.isMaximized());
+      }
+    };
+    this.window.on('maximize', sendMaximizeState);
+    this.window.on('unmaximize', sendMaximizeState);
+    // Restoring a window that was maximized when it was closed can leave the GUI's glyph stale.
+    this.window.on('restore', sendMaximizeState);
 
     this.ipc.handle('get-initial-file', () => {
       return this.activeFileId;
@@ -576,6 +622,18 @@ class EditorWindow extends ProjectRunningWindow {
     return 'editor';
   }
 
+  getWindowOptions () {
+    const options = super.getWindowOptions();
+    if (settings.menuBarInTitleBar) {
+      // Hide the OS title bar entirely and let the GUI draw its own window controls
+      // (src-renderer-webpack/editor/gui/window-controls.jsx). No titleBarOverlay: the overlay is
+      // painted by the OS at a fixed size and does not scale with the page zoom, so with Ctrl+=/- the
+      // controls would stay the same size while the menu bar they sit on grows and shrinks.
+      options.titleBarStyle = 'hidden';
+    }
+    return options;
+  }
+
   getDimensions () {
     return {
       width: 1280,
@@ -641,6 +699,40 @@ class EditorWindow extends ProjectRunningWindow {
 
   canExitFullscreenByPressingEscape () {
     return !this.isInEditorFullScreen;
+  }
+
+  /**
+   * Replace this window with a fresh one, re-opening the file it currently has open.
+   *
+   * titleBarStyle / titleBarOverlay can only be set when the BrowserWindow is constructed, so
+   * toggling the merged title bar means recreating the window. The replacement re-opens the same
+   * file so the user does not lose their work; unsaved changes are lost, which is why the caller
+   * must confirm with the user first (the renderer only offers this while the document is
+   * unchanged, and we double-check the document-edited flag here).
+   *
+   * @returns {boolean} false if the window was left alone because it has unsaved changes
+   */
+  recreate () {
+    if (this.window.isDocumentEdited()) {
+      return false;
+    }
+
+    // Grab everything we need from this window before tearing it down. The bounds are handed to
+    // the replacement's constructor so it is positioned before it is shown; otherwise it would
+    // briefly appear at the default centered position first.
+    const bounds = this.window.getBounds();
+    const wasMaximized = this.window.isMaximized();
+    const activeFile = this.activeFileId === null ? null : this.openedFiles.get(this.activeFileId) || null;
+
+    // destroy() rather than close(): close() can be vetoed by the renderer's beforeunload
+    // handler, and the replacement window would then sit behind a window that is still open.
+    this.window.destroy();
+
+    const replacement = new EditorWindow(activeFile, null, bounds);
+    if (wasMaximized) {
+      replacement.window.maximize();
+    }
+    return true;
   }
 
   updateRichPresence () {
