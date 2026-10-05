@@ -270,20 +270,10 @@ class EditorWindow extends ProjectRunningWindow {
       }
       processingWillPreventUnload = true;
 
+      // The prompt itself is shared with the merged title bar's window rebuild, so that the two
+      // cannot drift apart; only the way it is shown differs (see recreate()).
       setTimeout(() => {
-        const choice = dialog.showMessageBoxSync(this.window, {
-          title: APP_NAME,
-          type: 'info',
-          buttons: [
-            translate('unload.stay'),
-            translate('unload.leave')
-          ],
-          cancelId: 0,
-          defaultId: 0,
-          message: translate('unload.message'),
-          detail: translate('unload.detail'),
-          noLink: true
-        });
+        const choice = dialog.showMessageBoxSync(this.window, prompts.getUnsavedChangesOptions());
         if (choice === 1) {
           this.window.destroy();
         }
@@ -706,34 +696,22 @@ class EditorWindow extends ProjectRunningWindow {
    *
    * titleBarStyle / titleBarOverlay can only be set when the BrowserWindow is constructed, so
    * toggling the merged title bar means recreating the window. The replacement re-opens the same
-   * file, so a saved project comes back as it was; unsaved work cannot, so the user is asked first,
-   * with the same Stay/Leave prompt closing a window puts up, and "Stay" leaves this window alone.
+   * file, so a saved project comes back as it was; unsaved work cannot, so the user is asked first
+   * with the very same prompt closing a window puts up (prompts.getUnsavedChangesOptions), and
+   * "Stay" leaves this window alone.
    *
-   * The prompt is assembled here rather than by going through the close path itself. That path is
-   * driven by the renderer's beforeunload handler vetoing a close, and it ends in window.destroy()
-   * -- with nothing to put a replacement window up afterwards, and no way to report the answer back
-   * to the caller, which needs it to tell the settings page how many windows were left alone. Only
-   * the wording and the button pair come from the shared strings, so the two prompts cannot drift
-   * apart, and the focus problem that forces the close path to defer its dialog (see its comment)
-   * does not apply here: this runs from an async IPC handler, not from a synchronous OS event.
+   * That prompt object is shared rather than this going through the close path itself, because the
+   * close path is driven by the renderer's beforeunload handler vetoing a close and ends in
+   * window.destroy() -- with nothing to put a replacement window up afterwards, and no way to report
+   * the answer back to the caller, which needs it to tell the settings page how many windows were
+   * left alone. Only the call differs: this runs from an async IPC handler, so it can await the
+   * dialog instead of needing the timeout the close path uses for focus (see its comment).
    *
    * @returns {Promise<boolean>} false if the window was left alone, i.e. the user chose to stay
    */
   async recreate () {
     if (this.window.isDocumentEdited()) {
-      const choice = await dialog.showMessageBox(this.window, {
-        title: APP_NAME,
-        type: 'info',
-        buttons: [
-          translate('unload.stay'),
-          translate('unload.leave')
-        ],
-        cancelId: 0,
-        defaultId: 0,
-        message: translate('desktop-settings.menu-bar-in-title-bar-reopen'),
-        detail: translate('unload.detail'),
-        noLink: true
-      });
+      const choice = await dialog.showMessageBox(this.window, prompts.getUnsavedChangesOptions());
       if (choice.response !== 1) {
         return false;
       }

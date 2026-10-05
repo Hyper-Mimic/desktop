@@ -531,10 +531,6 @@
     "string": "Some editor windows kept the title bar they already had. They will pick up the change the next time they are opened.",
     "developer_comment": "Note shown when the merged title bar was not applied to every open editor window because the user chose to keep those windows open at the unsaved changes prompt."
   },
-  "desktop-settings.menu-bar-in-title-bar-reopen": {
-    "string": "Changing this setting reopens the window.",
-    "developer_comment": "Message of the confirmation prompt shown before an editor window with unsaved changes is reopened to apply the merged title bar setting. The buttons and the detail line are the ones used when closing a window with unsaved changes."
-  },
   "desktop-settings.menu-bar-in-title-bar-unsupported": {
     "string": "This is not supported on this platform.",
     "developer_comment": "Warning shown when the merged title bar was requested on a platform that does not support it. The option is hidden on macOS, so this is a fallback."
