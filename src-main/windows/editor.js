@@ -706,15 +706,37 @@ class EditorWindow extends ProjectRunningWindow {
    *
    * titleBarStyle / titleBarOverlay can only be set when the BrowserWindow is constructed, so
    * toggling the merged title bar means recreating the window. The replacement re-opens the same
-   * file so the user does not lose their work; unsaved changes are lost, which is why the caller
-   * must confirm with the user first (the renderer only offers this while the document is
-   * unchanged, and we double-check the document-edited flag here).
+   * file, so a saved project comes back as it was; unsaved work cannot, so the user is asked first,
+   * with the same Stay/Leave prompt closing a window puts up, and "Stay" leaves this window alone.
    *
-   * @returns {boolean} false if the window was left alone because it has unsaved changes
+   * The prompt is assembled here rather than by going through the close path itself. That path is
+   * driven by the renderer's beforeunload handler vetoing a close, and it ends in window.destroy()
+   * -- with nothing to put a replacement window up afterwards, and no way to report the answer back
+   * to the caller, which needs it to tell the settings page how many windows were left alone. Only
+   * the wording and the button pair come from the shared strings, so the two prompts cannot drift
+   * apart, and the focus problem that forces the close path to defer its dialog (see its comment)
+   * does not apply here: this runs from an async IPC handler, not from a synchronous OS event.
+   *
+   * @returns {Promise<boolean>} false if the window was left alone, i.e. the user chose to stay
    */
-  recreate () {
+  async recreate () {
     if (this.window.isDocumentEdited()) {
-      return false;
+      const choice = await dialog.showMessageBox(this.window, {
+        title: APP_NAME,
+        type: 'info',
+        buttons: [
+          translate('unload.stay'),
+          translate('unload.leave')
+        ],
+        cancelId: 0,
+        defaultId: 0,
+        message: translate('desktop-settings.menu-bar-in-title-bar-reopen'),
+        detail: translate('unload.detail'),
+        noLink: true
+      });
+      if (choice.response !== 1) {
+        return false;
+      }
     }
 
     // Grab everything we need from this window before tearing it down. The bounds are handed to

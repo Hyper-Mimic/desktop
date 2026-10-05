@@ -127,9 +127,10 @@ class DesktopSettingsWindow extends AbstractWindow {
 
       // titleBarStyle / titleBarOverlay are BrowserWindow constructor options, so the change only
       // takes effect on a new window. Recreate them now instead of making the user restart, and
-      // re-open whatever file each one had. Windows with unsaved changes are skipped (recreate()
-      // returns false) so that toggling this can never lose work; the caller reports how many were
-      // left alone so the settings page can tell the user to save and try again.
+      // re-open whatever file each one had. A window with unsaved changes gets a Stay/Leave prompt
+      // of its own first (recreate() puts it up and reports back false for "stay"), so toggling this
+      // can never lose work silently -- the caller counts how many were left alone so the settings
+      // page can say that those still have the old title bar.
       //
       // Imported late due to circular dependencies: windows/editor.js requires this file.
       const EditorWindow = require('./editor');
@@ -137,7 +138,13 @@ class DesktopSettingsWindow extends AbstractWindow {
       let recreated = 0;
       let skipped = 0;
       for (const editorWindow of editorWindows) {
-        if (editorWindow.recreate()) {
+        // The list is from before the first prompt, and the prompts are awaited one at a time so
+        // that several of them cannot stack up unreadably. A window cannot be closed while its own
+        // prompt is up, but quitting the app takes them all away, so re-check.
+        if (editorWindow.window.isDestroyed()) {
+          continue;
+        }
+        if (await editorWindow.recreate()) {
           recreated++;
         } else {
           skipped++;
