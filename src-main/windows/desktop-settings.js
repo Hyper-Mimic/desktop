@@ -31,7 +31,11 @@ class DesktopSettingsWindow extends AbstractWindow {
           exitFullscreenOnEscape: settings.exitFullscreenOnEscape,
           richPresenceAvailable: RichPresence.isAvailable(),
           richPresence: settings.richPresence,
-          crashDumps: settings.crashDumps
+          crashDumps: settings.crashDumps,
+          // Reported instead of just reading settings.menuBarInTitleBar because the editor can
+          // only apply the layout if this platform supports it at all.
+          menuBarInTitleBarSupported: process.platform === 'win32' || process.platform === 'linux',
+          menuBarInTitleBar: settings.menuBarInTitleBar
         }
       };
     });
@@ -104,6 +108,42 @@ class DesktopSettingsWindow extends AbstractWindow {
         RichPresence.disable();
       }
       await settings.save();
+    });
+
+    this.ipc.handle('set-menu-bar-in-title-bar', async (event, menuBarInTitleBar) => {
+      const supported = process.platform === 'win32' || process.platform === 'linux';
+      if (menuBarInTitleBar && !supported) {
+        return {recreated: 0, skipped: 0, unsupported: true};
+      }
+
+      const wasEnabled = settings.menuBarInTitleBar;
+      settings.menuBarInTitleBar = !!menuBarInTitleBar;
+      await settings.save();
+
+      if (wasEnabled === settings.menuBarInTitleBar) {
+        // Nothing actually changed, so don't disturb the user's windows.
+        return {recreated: 0, skipped: 0, unsupported: false};
+      }
+
+      // titleBarStyle / titleBarOverlay are BrowserWindow constructor options, so the change only
+      // takes effect on a new window. Recreate them now instead of making the user restart, and
+      // re-open whatever file each one had. Windows with unsaved changes are skipped (recreate()
+      // returns false) so that toggling this can never lose work; the caller reports how many were
+      // left alone so the settings page can tell the user to save and try again.
+      //
+      // Imported late due to circular dependencies: windows/editor.js requires this file.
+      const EditorWindow = require('./editor');
+      const editorWindows = AbstractWindow.getWindowsByClass(EditorWindow);
+      let recreated = 0;
+      let skipped = 0;
+      for (const editorWindow of editorWindows) {
+        if (editorWindow.recreate()) {
+          recreated++;
+        } else {
+          skipped++;
+        }
+      }
+      return {recreated, skipped, unsupported: false};
     });
 
     this.ipc.handle('open-user-data', async () => {

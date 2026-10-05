@@ -338,6 +338,56 @@
         richPresenceMoreInformation.textContent = strings['desktop-settings.more-information'];
       </script>
 
+      <label class="menu-bar-in-title-bar-row" hidden>
+        <input type="checkbox" class="menu-bar-in-title-bar-checkbox" autocomplete="off">
+        <span class="menu-bar-in-title-bar-label"></span>
+      </label>
+      <div class="warning menu-bar-in-title-bar-warning" hidden></div>
+      <script>
+        const menuBarInTitleBarRow = document.querySelector('.menu-bar-in-title-bar-row');
+        const menuBarInTitleBar = document.querySelector('.menu-bar-in-title-bar-checkbox');
+        const menuBarInTitleBarWarning = document.querySelector('.menu-bar-in-title-bar-warning');
+        // macOS has its own title bar model; the main process refuses to apply the merge there,
+        // so the option is hidden rather than shown-but-broken.
+        if (settings.menuBarInTitleBarSupported) {
+          menuBarInTitleBarRow.hidden = false;
+          menuBarInTitleBar.checked = settings.menuBarInTitleBar;
+          menuBarInTitleBar.onchange = async () => {
+            const wasChecked = menuBarInTitleBar.checked;
+            // The window is rebuilt synchronously on the main side, so disable the checkbox while
+            // that happens to keep the click from queuing several rebuilds.
+            menuBarInTitleBar.disabled = true;
+            let result;
+            try {
+              result = await DesktopSettingsPreload.setMenuBarInTitleBar(wasChecked);
+            } catch (error) {
+              console.error(error);
+              result = {recreated: 0, skipped: 0, unsupported: false};
+            }
+            menuBarInTitleBar.disabled = false;
+            if (result.unsupported) {
+              menuBarInTitleBar.checked = false;
+              menuBarInTitleBarWarning.hidden = false;
+              menuBarInTitleBarWarning.textContent = strings['desktop-settings.menu-bar-in-title-bar-unsupported'];
+              return;
+            }
+            if (result.skipped > 0) {
+              // Some windows have unsaved changes and were left alone. Reflect the truth: the
+              // stored setting is already flipped, so the checkbox would otherwise claim the
+              // merge is active when those windows still have the old title bar.
+              menuBarInTitleBar.checked = !wasChecked;
+              menuBarInTitleBarWarning.hidden = false;
+              menuBarInTitleBarWarning.textContent = strings['desktop-settings.menu-bar-in-title-bar-unsaved'];
+            } else {
+              menuBarInTitleBarWarning.hidden = true;
+            }
+          };
+        }
+        document.querySelector('.menu-bar-in-title-bar-label').textContent =
+          strings['desktop-settings.menu-bar-in-title-bar'];
+        menuBarInTitleBarWarning.textContent = strings['desktop-settings.menu-bar-in-title-bar-unsaved'];
+      </script>
+
       <label>
         <div class="label crash-dumps-label"></div>
         <select class="crash-dumps-select" autocomplete="off">
