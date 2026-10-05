@@ -13,7 +13,13 @@
   position: fixed;
   top: 0;
   right: 0;
-  z-index: 500;
+  /* Above the dialogs: the controls are the window's title bar, so a dialog that fills the window
+     must not be able to hide them -- the asset and extension libraries do exactly that, and with the
+     OS title bar gone there would otherwise be no way left to close or minimise the window.
+     $z-index-modal is 510 (scratch-gui/src/css/z-index.css) and this file cannot import it, so the
+     value is spelled out here as it is in scratch-gui's own lib/window-modal. Still below
+     $z-index-drag-layer (1000) and the stage colour picker (2000), which must stay on top. */
+  z-index: 520;
   display: flex;
   height: var(--hm-titlebar-height, 3rem);
   /* The strip is a drag region so the window can be moved by it, but not by the buttons. */
