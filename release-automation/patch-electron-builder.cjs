@@ -14,7 +14,11 @@ LinuxTargetHelper.prototype.computeMimeTypeFiles = async function (...args) {
 
     const xmlPath = pathUtil.join(__dirname, '../linux-files/org.hypermimic.HyperMimic.mime.xml');
     const rawXml = await fsPromises.readFile(xmlPath, 'utf-8');
-    const newXml = rawXml.replace(/org\.turbowarp\.TurboWarp/g, packageJSON.name);
+    // The generic-icon name has to match the icon electron-builder actually installs, which is
+    // named after linux.executableName (FpmTarget writes /usr/share/icons/hicolor/<size>x<size>/apps/<executableName>.png).
+    // The id in the file is the rDNS app id used by Flatpak, so it never matches on its own.
+    const iconName = packageJSON.build?.linux?.executableName || packageJSON.name;
+    const newXml = rawXml.replace(/org\.hypermimic\.HyperMimic/g, iconName);
 
     // Roughly equivalent to fs-extra's outputFile (creates parent directories as needed)
     await fsPromises.mkdir(pathUtil.dirname(tempFile), {
