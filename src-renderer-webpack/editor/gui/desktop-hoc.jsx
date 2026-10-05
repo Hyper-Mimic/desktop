@@ -187,8 +187,11 @@ class MergedTitleBar extends React.Component {
       const menuBar = document.querySelector('[class*="menu-bar_menu-bar"]');
       if (menuBar) {
         // offsetHeight is the border-box height, which is what the controls' height should match.
+        // Deliberately still the menu bar even when a dialog covers it: the controls are the menu
+        // bar's right end, so they keep its height (and the width of their buttons is a fixed rem
+        // count anyway, see window-controls.css).
         root.style.setProperty('--hm-titlebar-height', `${menuBar.offsetHeight}px`);
-        setTitlebarColors(menuBar);
+        setTitlebarColors();
       }
     };
     this.menuBarObserver = new ResizeObserver(this.syncTitlebarHeight);
@@ -221,10 +224,7 @@ class MergedTitleBar extends React.Component {
     //     cover that.
     // setTitlebarColors only writes when the answer changed, so this cannot feed itself.
     const recolour = () => {
-      const menuBar = document.querySelector('[class*="menu-bar_menu-bar"]');
-      if (menuBar) {
-        setTitlebarColors(menuBar);
-      }
+      setTitlebarColors();
     };
     this.rootObserver = new MutationObserver(recolour);
     this.rootObserver.observe(root, {
@@ -233,6 +233,14 @@ class MergedTitleBar extends React.Component {
     });
     this.headObserver = new MutationObserver(recolour);
     this.headObserver.observe(document.head, {childList: true, subtree: true});
+
+    // A third source: opening or closing a full screen dialog moves the controls from the menu bar
+    // onto the dialog's header or back (see getTitlebarColorSource), and those two have unrelated
+    // colours. react-modal renders its dialog through a portal appended to <body>, so the dialog
+    // arriving and leaving is a change to body's direct children -- far cheaper to watch than the
+    // whole subtree, which fires on every edit in the editor.
+    this.bodyObserver = new MutationObserver(recolour);
+    this.bodyObserver.observe(document.body, {childList: true});
   }
   componentDidUpdate (prevProps) {
     if (prevProps.isFullScreen !== this.props.isFullScreen) {
@@ -279,6 +287,9 @@ class MergedTitleBar extends React.Component {
     if (this.headObserver) {
       this.headObserver.disconnect();
     }
+    if (this.bodyObserver) {
+      this.bodyObserver.disconnect();
+    }
     document.documentElement.classList.remove('hm-titlebar-merged');
     document.documentElement.classList.remove('hm-custom-titlebar');
     document.documentElement.classList.remove('hm-rtl');
@@ -324,18 +335,41 @@ MergedTitleBar.propTypes = {
 };
 
 /**
- * Publish the window controls' colours as CSS variables on <html>, derived from the menu bar they
- * share a row with.
+ * The element the window controls are actually drawn on top of, which is what their colours have to
+ * be measured from.
  *
- * The glyph colour is simply the menu bar's own computed text colour, so the buttons match it under
+ * Normally that is the menu bar, and it is the only candidate. But a full screen dialog -- the
+ * asset and extension libraries are the only ones (components/library/library.jsx passes
+ * `fullScreen`) -- covers the menu bar and is drawn at a higher z-index, and window-controls.css
+ * raises the controls above the dialog so that they stay usable. There the controls sit on the
+ * dialog's own header instead, and its colours come from an unrelated set of variables
+ * (ui-modal-header-* against the menu bar's menu-bar-*), so measuring the menu bar would paint, for
+ * instance, the menu bar's dark text onto the library header's saturated purple.
+ *
+ * Attribute-contains selectors, not class names: the local names of both elements are CSS-module
+ * hashes, and the header does not even live in a stylesheet this repo owns.
+ *
+ * @returns {Element|null} the topmost element at the head of the window, or null before the GUI has
+ * rendered (and while neither is on screen)
+ */
+const getTitlebarColorSource = () => (
+  document.querySelector('[class*="modal_full-screen_"] [class*="modal_header"]') ||
+  document.querySelector('[class*="menu-bar_menu-bar"]')
+);
+
+/**
+ * Publish the window controls' colours as CSS variables on <html>, derived from the element they
+ * share a row with (see getTitlebarColorSource).
+ *
+ * The glyph colour is simply that element's own computed text colour, so the buttons match it under
  * any configuration. The computed value is what makes this work where reading a variable does not:
  * scratch-gui's menu bar sets `color: var(--menu-bar-foreground)`, but the custom-editor-theme addon
  * overrides it on the element with `color: var(--customEditorTheme-menuBar-text)` and never touches
  * that variable. getComputedStyle resolves whichever one won, so both paths are covered without
  * knowing which addon is active.
  *
- * The hover washes are a separate concern: they have to contrast with the menu bar's *background*,
- * not match its text, and CSS cannot branch on a colour's lightness — there is no "is this colour
+ * The hover washes are a separate concern: they have to contrast with that element's *background*,
+ * not match its text, and CSS cannot branch on a colour's lightness -- there is no "is this colour
  * light" selector. The theme flag is not a substitute either, since a custom accent can be pale on
  * the light theme and the high-contrast theme inverts things outright. So the rendered background is
  * measured and the wash direction picked from that.
@@ -346,8 +380,6 @@ MergedTitleBar.propTypes = {
  *
  * getComputedStyle is used throughout rather than reading the CSS variables directly, because those
  * hold unresolved values like `var(--looks-secondary)`.
- *
- * @param {Element} menuBar the rendered menu bar element
  */
 const TITLEBAR_WASHES = {
   light: {
@@ -363,8 +395,12 @@ const TITLEBAR_WASHES = {
 let lastGlyph = null;
 let lastWash = null;
 
-const setTitlebarColors = (menuBar) => {
-  const computed = getComputedStyle(menuBar);
+const setTitlebarColors = () => {
+  const source = getTitlebarColorSource();
+  if (!source) {
+    return;
+  }
+  const computed = getComputedStyle(source);
 
   if (computed.color !== lastGlyph) {
     lastGlyph = computed.color;
