@@ -244,6 +244,17 @@ class EditorWindow extends ProjectRunningWindow {
     this.openedProjectAt = Date.now();
 
     /**
+     * Whether the project in this window has unsaved changes, as last reported by the renderer
+     * through the set-changed IPC. Tracked here rather than read back from the window, because
+     * BrowserWindow's own document-edited flag does not exist outside macOS: setDocumentEdited and
+     * isDocumentEdited are both documented @platform darwin, so on Windows and Linux the flag would
+     * quietly stay false and nothing depending on it would ever fire. macOS still gets
+     * setDocumentEdited as well, for the dot in its close button.
+     * @type {boolean}
+     */
+    this.hasUnsavedChanges = false;
+
+    /**
      * @param {string} id
      * @returns {OpenedFile}
      * @throws if invalid ID
@@ -374,7 +385,14 @@ class EditorWindow extends ProjectRunningWindow {
     });
 
     this.ipc.handle('set-changed', (event, changed) => {
-      this.window.setDocumentEdited(changed);
+      this.hasUnsavedChanges = !!changed;
+
+      // macOS only: this is what puts the dot in the close button. It is not how the state is
+      // tracked (see hasUnsavedChanges), and calling it elsewhere would be calling an API that does
+      // not exist there.
+      if (process.platform === 'darwin') {
+        this.window.setDocumentEdited(!!changed);
+      }
     });
 
     this.ipc.handle('opened-file', (event, id) => {
@@ -707,10 +725,13 @@ class EditorWindow extends ProjectRunningWindow {
    * left alone. Only the call differs: this runs from an async IPC handler, so it can await the
    * dialog instead of needing the timeout the close path uses for focus (see its comment).
    *
+   * Whether there is anything to lose comes from hasUnsavedChanges, not from the window: see what is
+   * written where that field is set for why the window's own flag is not usable here.
+   *
    * @returns {Promise<boolean>} false if the window was left alone, i.e. the user chose to stay
    */
   async recreate () {
-    if (this.window.isDocumentEdited()) {
+    if (this.hasUnsavedChanges) {
       const choice = await dialog.showMessageBox(this.window, prompts.getUnsavedChangesOptions());
       if (choice.response !== 1) {
         return false;
