@@ -1,0 +1,86 @@
+/* The glyph colour and the hover washes are all measured from the rendered menu bar by
+   desktop-hoc.jsx and published as variables, rather than read from --menu-bar-foreground: the
+   custom-editor-theme addon paints the bar directly on the element (its experimental_editor.css
+   sets background-color and color from --customEditorTheme-menuBar) without touching the theme
+   variable, so a var-driven glyph stays white on a white bar.
+
+   The washes are variables rather than a pair of theme-class rules on purpose: keying them off
+   html.hm-titlebar-* made them (0,3,1), which outranked the close button's own :hover rule and
+   silently cost it the red. As plain variables the rules stay at (0,2,0) and source order decides,
+   which is what the close rule below relies on. The white fallbacks only apply for the first frame,
+   before the measurement lands. */
+.windowControls {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 500;
+  display: flex;
+  height: var(--hm-titlebar-height, 3rem);
+  /* The strip is a drag region so the window can be moved by it, but not by the buttons. */
+  -webkit-app-region: drag;
+  color: var(--hm-titlebar-glyph, #fff);
+}
+
+.windowControlButton {
+  /* Width stays a fixed rem count: 3rem per button is what menu-bar.css reserves (9rem), and that
+     is deliberately zoom-relative but height-independent. */
+  width: 3rem;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: default;
+  /* Required: without it the drag region on the parent swallows the clicks. */
+  -webkit-app-region: no-drag;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Declared before the close button's own :hover rule on purpose, so that rule wins on source order.
+   Both are (0,2,0); a light bar gets a dark wash and a dark bar a light one, which is the only way
+   to guarantee the wash is visible without asking CSS whether a colour is light. */
+.windowControlButton:hover {
+  background-color: var(--hm-titlebar-wash, rgba(255, 255, 255, 0.16));
+}
+
+.windowControlButton:active {
+  background-color: var(--hm-titlebar-wash-active, rgba(255, 255, 255, 0.26));
+}
+
+.windowControlButton:focus-visible {
+  /* Keep the keyboard focus ring; only the offset would look wrong against the edge. */
+  outline-offset: -2px;
+}
+
+/* Win10 style close hover, which is a brighter red than the Win11 #c42b1c and reads better against
+   the light accent menu bar. The glyph goes white for contrast rather than inheriting the menu bar's
+   colour, which may be light. */
+.windowControlClose:hover {
+  background-color: #e81123;
+  color: #fff;
+}
+
+.windowControlClose:active {
+  background-color: #c50f1e;
+}
+
+.windowControlIcon {
+  width: 1rem;
+  height: 1rem;
+  fill: currentColor;
+  pointer-events: none;
+}
+
+/* RTL: the window controls move to the left, the opposite end from the menu bar's start, and the
+   order within the strip mirrors so the close button ends up on the outside edge like the OS's.
+   desktop-hoc.jsx toggles hm-rtl on <html> because dir="rtl" lives on the GUI's own pageWrapper Box
+   (components/gui/gui.jsx), not on <html>, and these controls are a sibling of that subtree. */
+:global(html.hm-rtl) .windowControls {
+  right: auto;
+  left: 0;
+  flex-direction: row-reverse;
+}
