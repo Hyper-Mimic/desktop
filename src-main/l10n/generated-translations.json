@@ -1890,7 +1890,7 @@
         "update.security-title": "安全更新可用",
         "update.window-title": "更新可用",
         "desktop-settings.menu-bar-in-title-bar": "将菜单栏融合到窗口标题栏",
-        "desktop-settings.menu-bar-in-title-bar-unsaved": "部分编辑器窗口保留了原有的标题栏，将在下次打开时应用此更改。",
+        "desktop-settings.menu-bar-in-title-bar-unsaved": "此更改未应用：有编辑器窗口还有未保存的改动。请先把它们保存，再重新切换此选项。",
         "desktop-settings.menu-bar-in-title-bar-unsupported": "当前平台不支持此功能。"
     }
 }

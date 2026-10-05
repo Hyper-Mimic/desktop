@@ -528,8 +528,8 @@
     "developer_comment": "Option to hide the OS title bar and draw the window controls on the right end of the editor's menu bar instead. Windows and Linux only."
   },
   "desktop-settings.menu-bar-in-title-bar-unsaved": {
-    "string": "Some editor windows kept the title bar they already had. They will pick up the change the next time they are opened.",
-    "developer_comment": "Note shown when the merged title bar was not applied to every open editor window because the user chose to keep those windows open at the unsaved changes prompt."
+    "string": "This change was not applied: an editor window still has unsaved changes. Save it first, then change this setting again.",
+    "developer_comment": "Note shown when the merged title bar setting was reverted because the user chose to keep an editor window with unsaved changes open instead of letting it be reopened."
   },
   "desktop-settings.menu-bar-in-title-bar-unsupported": {
     "string": "This is not supported on this platform.",
