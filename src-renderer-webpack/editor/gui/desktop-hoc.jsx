@@ -24,6 +24,7 @@ import MenuBar from 'scratch-gui/src/components/menu-bar/menu-bar.jsx';
 import SBFileUploaderHOC from 'scratch-gui/src/lib/sb-file-uploader-hoc.jsx';
 import {showOpenFilePicker, showSaveFilePicker, WrappedFileHandle} from './filesystem-api.js';
 import {setStrings} from '../prompt/prompt.js';
+import WindowControls from './window-controls.jsx';
 import styles from './gui.css';
 
 let mountedOnce = false;
@@ -129,6 +130,269 @@ ProjectViewMenuBar.propTypes = {
 // the same HOC is applied here to get the same behavior instead of reimplementing the file-open
 // state machine (requestProjectUpload -> load -> onLoadedProject -> setFileHandle).
 const ProjectViewMenuBarWithFileUpload = SBFileUploaderHOC(ProjectViewMenuBar);
+
+/**
+ * The window's own title bar controls, shown when "merge the menu bar into the window title bar" is
+ * on. The main process then builds the window with titleBarStyle: 'hidden' and no overlay, so
+ * nothing is drawn by the OS and these have to be.
+ *
+ * They are ordinary DOM rather than a titleBarOverlay specifically because the overlay is painted by
+ * the OS at a fixed size: with Ctrl+=/- the menu bar they sit on grows and shrinks while the overlay
+ * buttons would not. Being DOM, they follow the zoom for free.
+ *
+ * The class on <html> is what makes scratch-gui's menu-bar.css turn the bar into a drag region and
+ * reserve room for these; it cannot be a React-driven style because the rule targets <html>.
+ *
+ * The controls' height has to follow the menu bar's, which addons change: editor-compact shrinks it
+ * from 3rem to 2rem. A ResizeObserver measures the bar and publishes the height as a CSS variable,
+ * which is what window-controls.css sizes itself from.
+ *
+ * Rendered from here rather than from gui.jsx so that it is inside AppStateHOC, i.e. inside the
+ * IntlProvider that the buttons' labels need.
+ */
+class MergedTitleBar extends React.Component {
+  constructor (props) {
+    super(props);
+    this.state = {
+      isMaximized: false,
+      // Whether the merged title bar currently applies. Driven from props by syncMergedState()
+      // rather than derived during render, because the <html> class it controls is a side effect.
+      merged: true
+    };
+    this.handleMinimize = this.handleMinimize.bind(this);
+    this.handleToggleMaximize = this.handleToggleMaximize.bind(this);
+    this.handleClose = this.handleClose.bind(this);
+  }
+  componentDidMount () {
+    const root = document.documentElement;
+    // Persistent: the window has no OS title bar for as long as it is open, so the web content is
+    // the only thing the window can be dragged by. Set here rather than in syncMergedState because it
+    // must survive fullscreen, where the controls themselves step aside.
+    root.classList.add('hm-custom-titlebar');
+    this.syncMergedState();
+
+    // The window may already be maximized (restored on startup), so ask rather than assume false.
+    // The main process also pushes changes, which covers the user double-clicking the bar or using
+    // the taskbar.
+    EditorPreload.isMaximized().then(isMaximized => {
+      this.setState({isMaximized});
+    });
+    this.unsubscribe = EditorPreload.onMaximizeChanged(isMaximized => {
+      this.setState({isMaximized});
+    });
+
+    // There can be more than one menu bar (the editor's and the project view's); the controls sit on
+    // whichever is topmost, so watch the first one that appears.
+    this.syncTitlebarHeight = () => {
+      const menuBar = document.querySelector('[class*="menu-bar_menu-bar"]');
+      if (menuBar) {
+        // offsetHeight is the border-box height, which is what the controls' height should match.
+        root.style.setProperty('--hm-titlebar-height', `${menuBar.offsetHeight}px`);
+        setTitlebarColors(menuBar);
+      }
+    };
+    this.menuBarObserver = new ResizeObserver(this.syncTitlebarHeight);
+
+    // The GUI renders on the next tick, so the bar may not exist yet on the first frame. Retry a
+    // bounded number of times: an unbounded requestAnimationFrame loop would spin forever.
+    let attempts = 0;
+    const attach = () => {
+      if (this.unmounting) {
+        return;
+      }
+      const menuBar = document.querySelector('[class*="menu-bar_menu-bar"]');
+      if (menuBar) {
+        this.menuBarObserver.observe(menuBar);
+        this.syncTitlebarHeight();
+        return;
+      }
+      if (++attempts < 60) {
+        this.attachFrame = requestAnimationFrame(attach);
+      }
+    };
+    attach();
+
+    // Recolouring the menu bar does not resize it, so the ResizeObserver stays quiet. Two more
+    // sources can change it and both have to be covered, because the custom-editor-theme addon is
+    // loaded from upstream at runtime and its mechanism is not visible from here:
+    //   - the theme system writes colour variables onto <html> (lib/themes/guiHelpers.js), so
+    //     attribute changes on <html> cover light/dark/high-contrast and accent switches;
+    //   - an addon may instead inject or replace a <style> element, so subtree changes in <head>
+    //     cover that.
+    // setTitlebarColors only writes when the answer changed, so this cannot feed itself.
+    const recolour = () => {
+      const menuBar = document.querySelector('[class*="menu-bar_menu-bar"]');
+      if (menuBar) {
+        setTitlebarColors(menuBar);
+      }
+    };
+    this.rootObserver = new MutationObserver(recolour);
+    this.rootObserver.observe(root, {
+      attributes: true,
+      attributeFilter: ['class', 'style', 'theme']
+    });
+    this.headObserver = new MutationObserver(recolour);
+    this.headObserver.observe(document.head, {childList: true, subtree: true});
+  }
+  componentDidUpdate (prevProps) {
+    if (prevProps.isFullScreen !== this.props.isFullScreen) {
+      this.syncMergedState();
+    }
+  }
+  /**
+   * Turn the merged title bar on or off, according to whether it makes sense right now.
+   *
+   * Two classes are involved, and they mean different things:
+   *
+   *   - hm-custom-titlebar: this window has no OS title bar at all, because the setting is on. It is
+   *     set once and never toggled at runtime, since that would mean rebuilding the window. This is
+   *     what gates "there is nothing to drag the window by except the web content".
+   *   - hm-titlebar-merged: the window controls are being drawn right now, which additionally
+   *     requires the menu bar to be the thing at the top of the window. Editor fullscreen is the
+   *     exception: the stage draws its own full-width control bar over the top strip
+   *     (components/stage-header/stage-header.css .stage-header-wrapper-overlay is position:fixed
+   *     with top/left/right: 0), with its settings and exit-fullscreen buttons at the right end,
+   *     exactly where the window controls sit. So the controls step aside there -- but the stage's
+   *     bar becomes the drag region instead, so the window is still movable.
+   */
+  syncMergedState () {
+    const root = document.documentElement;
+    const merged = !this.props.isFullScreen;
+    root.classList.toggle('hm-titlebar-merged', merged);
+    // The controls and the space reserved for them in menu-bar.css both mirror in RTL locales, and
+    // they live outside the GUI subtree that carries dir="rtl" (components/gui/gui.jsx puts it on
+    // its own pageWrapper Box), so <html> has to carry the signal for the stylesheet to see.
+    root.classList.toggle('hm-rtl', !!this.props.isRtl);
+    this.setState({merged});
+  }
+  componentWillUnmount () {
+    this.unmounting = true;
+    if (this.attachFrame !== undefined) {
+      cancelAnimationFrame(this.attachFrame);
+    }
+    if (this.menuBarObserver) {
+      this.menuBarObserver.disconnect();
+    }
+    if (this.rootObserver) {
+      this.rootObserver.disconnect();
+    }
+    if (this.headObserver) {
+      this.headObserver.disconnect();
+    }
+    document.documentElement.classList.remove('hm-titlebar-merged');
+    document.documentElement.classList.remove('hm-custom-titlebar');
+    document.documentElement.classList.remove('hm-rtl');
+    for (const name of Object.keys(TITLEBAR_WASHES.light)) {
+      document.documentElement.style.removeProperty(name);
+    }
+    document.documentElement.style.removeProperty('--hm-titlebar-height');
+    lastGlyph = null;
+    lastWash = null;
+    if (this.unsubscribe) {
+      this.unsubscribe();
+    }
+  }
+  handleMinimize () {
+    EditorPreload.minimizeWindow();
+  }
+  handleToggleMaximize () {
+    // The glyph flips when the main process reports the new state, so nothing to do here.
+    EditorPreload.toggleMaximizeWindow();
+  }
+  handleClose () {
+    EditorPreload.closeWindow();
+  }
+  render () {
+    if (!this.state.merged) {
+      return null;
+    }
+    return (
+      <WindowControls
+        isMaximized={this.state.isMaximized}
+        onMinimize={this.handleMinimize}
+        onToggleMaximize={this.handleToggleMaximize}
+        onClose={this.handleClose}
+        onDoubleClick={this.handleToggleMaximize}
+      />
+    );
+  }
+}
+
+MergedTitleBar.propTypes = {
+  isFullScreen: PropTypes.bool,
+  isRtl: PropTypes.bool
+};
+
+/**
+ * Publish the window controls' colours as CSS variables on <html>, derived from the menu bar they
+ * share a row with.
+ *
+ * The glyph colour is simply the menu bar's own computed text colour, so the buttons match it under
+ * any configuration. The computed value is what makes this work where reading a variable does not:
+ * scratch-gui's menu bar sets `color: var(--menu-bar-foreground)`, but the custom-editor-theme addon
+ * overrides it on the element with `color: var(--customEditorTheme-menuBar-text)` and never touches
+ * that variable. getComputedStyle resolves whichever one won, so both paths are covered without
+ * knowing which addon is active.
+ *
+ * The hover washes are a separate concern: they have to contrast with the menu bar's *background*,
+ * not match its text, and CSS cannot branch on a colour's lightness — there is no "is this colour
+ * light" selector. The theme flag is not a substitute either, since a custom accent can be pale on
+ * the light theme and the high-contrast theme inverts things outright. So the rendered background is
+ * measured and the wash direction picked from that.
+ *
+ * These are variables rather than a pair of theme-class rules on purpose: keying the washes off
+ * classes such as html.hm-titlebar-dark made them (0,3,1), which outranked the close button's own
+ * :hover rule and cost it the red. As variables the rules stay at (0,2,0) and source order decides.
+ *
+ * getComputedStyle is used throughout rather than reading the CSS variables directly, because those
+ * hold unresolved values like `var(--looks-secondary)`.
+ *
+ * @param {Element} menuBar the rendered menu bar element
+ */
+const TITLEBAR_WASHES = {
+  light: {
+    '--hm-titlebar-wash': 'rgba(0, 0, 0, 0.08)',
+    '--hm-titlebar-wash-active': 'rgba(0, 0, 0, 0.16)'
+  },
+  dark: {
+    '--hm-titlebar-wash': 'rgba(255, 255, 255, 0.16)',
+    '--hm-titlebar-wash-active': 'rgba(255, 255, 255, 0.26)'
+  }
+};
+
+let lastGlyph = null;
+let lastWash = null;
+
+const setTitlebarColors = (menuBar) => {
+  const computed = getComputedStyle(menuBar);
+
+  if (computed.color !== lastGlyph) {
+    lastGlyph = computed.color;
+    document.documentElement.style.setProperty('--hm-titlebar-glyph', computed.color);
+  }
+
+  const match = computed.backgroundColor && computed.backgroundColor.match(/^rgba?\(([^)]+)\)/);
+  let isLight = true;
+  if (match) {
+    const parts = match[1].split(/[,\s/]+/).filter(Boolean).map(Number);
+    const [r, g, b] = parts;
+    if (parts.length >= 3 && [r, g, b].every(Number.isFinite)) {
+      // Rec. 601 luma, the usual "is this light" weighting. Mid-grey at 0.5 is the crossover.
+      const luma = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      isLight = luma > 0.5;
+    }
+  }
+  // Only write when the answer changed: this runs from a MutationObserver on <html>'s style
+  // attribute, and writing identical values can still queue another record.
+  const next = isLight ? 'light' : 'dark';
+  if (next === lastWash) {
+    return;
+  }
+  lastWash = next;
+  for (const [name, value] of Object.entries(TITLEBAR_WASHES[next])) {
+    document.documentElement.style.setProperty(name, value);
+  }
+};
 
 const DesktopHOC = function (WrappedComponent) {
   class DesktopComponent extends React.Component {
@@ -252,6 +516,20 @@ const DesktopHOC = function (WrappedComponent) {
         this.handleSeeInside();
       }
     }
+    /**
+     * Whether this window was actually built with the OS title bar hidden.
+     *
+     * Read from the main process rather than from the stored setting: the setting is only applied
+     * when the window is constructed, and toggling it rebuilds the window, so the two always agree
+     * here — but asking is the honest way to know what this window is actually showing, and it also
+     * keeps the platform check (Windows/Linux only) in one place.
+     *
+     * @returns {boolean}
+     */
+    isMenuBarInTitleBarActive () {
+      const state = EditorPreload.getTitlebarState();
+      return !!(state && state.active && state.supported);
+    }
     render() {
       const {
         locale,
@@ -314,7 +592,18 @@ const DesktopHOC = function (WrappedComponent) {
             // this the stage sits in the top-left corner at its natural size while
             // .stage-header-wrapper (position:absolute; right:0) anchors to the far right of the
             // window. Reproduce that layout here, with the project-view menu bar on top.
-            <div className={styles.projectViewContainer}>
+            <div
+              className={styles.projectViewContainer}
+              // This menu bar is a sibling of the GUI, not inside it, and in player mode the GUI
+              // renders a bare <StageWrapper> with no pageWrapper at all -- so nothing below this
+              // point carries the dir attribute. scratch-gui picks direction by attribute, not by
+              // the light/dark theme or the browser's locale: components/gui/gui.jsx puts
+              // dir={isRtl ? 'rtl' : 'ltr'} on its own pageWrapper Box, and roughly 50 stylesheets
+              // key off it (components/button/button.css [dir="ltr"] .icon { margin-right } being
+              // the one that puts a gap between a button's icon and its label). Without it here the
+              // See inside icon butts straight against the text.
+              dir={this.props.isRtl ? 'rtl' : 'ltr'}
+            >
               <ProjectViewMenuBarWithFileUpload
                 messages={this.messages}
                 onClickAbout={aboutMenu}
@@ -331,6 +620,12 @@ const DesktopHOC = function (WrappedComponent) {
               <div className={styles.projectViewStageRow}>{gui}</div>
             </div>
           ) : gui}
+          {this.isMenuBarInTitleBarActive() ? (
+            <MergedTitleBar
+              isFullScreen={this.props.isFullScreen}
+              isRtl={this.props.isRtl}
+            />
+          ) : null}
         </React.Fragment>
       );
     }
@@ -363,6 +658,7 @@ const DesktopHOC = function (WrappedComponent) {
 
   const mapStateToProps = state => ({
     locale: state.locales.locale,
+    isRtl: state.locales.isRtl,
     loadingState: state.scratchGui.projectState.loadingState,
     isFullScreen: state.scratchGui.mode.isFullScreen,
     isPlayerOnly: state.scratchGui.mode.isPlayerOnly,
