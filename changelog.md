@@ -1,6 +1,19 @@
 This document is the authoritative source for HyperMimic's changelogs. Everything else gets generated from this list by `node scripts/generate-changelogs.mjs`.
 
 Prefix notes with "Windows:", "macOS:", or "Linux:" as needed. Do not use **formatting** or [links](https://hypermimic.netlify.app/).
+
+# 1.1.0 (2026-10-5)
+
+- 修复许多已知bug
+- 新的加载动画、新的一些小插件、新的打包器！
+- 将资源库的资源从 ccw 源引入而不是 scratch.mit.edu 源，因此修复了资源库中资源无法加载的问题
+- 向高级设置内添加许多功能
+- 让部分需要窗口承载的插件可以从工作区的右上角的工具箱按钮打开，可以在高级设置中调整顺序
+- 高级设置可以开启 Markdown 注释编辑器，支持绝大多数的 Markdown 语法，还允许通过 ```blocks 来显示积木，注释中的积木可以从中拖出
+- 在高级设置中，打开“将弹窗转成窗口”后，多窗口可以同时打开
+- Windows 桌面端允许在桌面设置中开启“将菜单栏融合到窗口标题栏”，移除原版窗口的标题栏，更适合和“紧凑的编辑器”这个插件使用
+- 插件“桌面端显示「查看作品页面」按钮”是这个版本新增的其中一个插件，这个功能允许显示「查看作品页面」按钮以在桌面端获得和网页端的类似体验，进入作品页面后运行文件更流畅
+
 # 1.0.6 (2026-09-5)
 
 - 修复已知bug
