@@ -7,11 +7,15 @@ import GUI from './gui.jsx';
 // src/playground/render-interface.jsx, which this bundle never imports: we mount the *library*
 // entry (see gui.jsx). Without this the settings modal renders but nothing reads the settings.
 import {initHyperMimic} from 'scratch-gui/src/lib/hypermimic-init.js';
+import {initEditorThemeSync} from './editor-theme-sync.js';
 
 import './media-device-chooser-impl.js';
 import '../prompt/prompt.js';
 
 initHyperMimic();
+// The standalone windows cannot see custom-editor-theme's variables; forward the resolved
+// colours to the main process (see src-main/theme.js).
+initEditorThemeSync();
 
 const appTarget = document.getElementById('app');
 document.body.classList.add('tw-loaded');

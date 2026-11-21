@@ -2,6 +2,7 @@ const { BrowserWindow, screen, session } = require('electron');
 const path = require('path');
 const openExternal = require('../open-external');
 const settings = require('../settings');
+const theme = require('../theme');
 
 /** @type {Map<unknown, AbstractWindow[]>} */
 const windowsByClass = new Map();
@@ -21,6 +22,9 @@ class AbstractWindow {
 
     /** @type {Electron.BrowserWindow} */
     this.window = options.existingWindow || new BrowserWindow(this.getWindowOptions());
+    // Popup windows (desktop settings, addon settings, update, about, ...) draw their own title
+    // bar on Windows/Linux so its colour can follow the editor's menu bar. See src-main/theme.js.
+    this.window.__hmTitleBarOverlay = this.isPopup() && theme.supportsOverlay();
     this.window.webContents.on('before-input-event', this.handleInput.bind(this));
     this.applySettings();
 
@@ -65,6 +69,9 @@ class AbstractWindow {
         windows.splice(idx, 1);
       }
     });
+
+    // Register before the subclass calls loadURL(), so the first did-finish-load is caught.
+    theme.applyToWindow(this);
   }
 
   static getAllWindows () {
@@ -193,6 +200,14 @@ class AbstractWindow {
     }
 
     options.backgroundColor = this.getBackgroundColor();
+
+    // The editor window has its own title bar handling (windows/editor.js). Other popups hide
+    // the OS title bar and draw EVERYTHING themselves in src-main/theme.js. No titleBarOverlay:
+    // its caption buttons cannot be themed, and on a dark title bar their hover wash is dark and
+    // effectively invisible. macOS keeps the native title bar (traffic lights).
+    if (this.isPopup() && theme.supportsOverlay()) {
+      options.titleBarStyle = 'hidden';
+    }
 
     // On Linux the icon doesn't get baked into the executable as it does on other platforms
     if (process.platform === 'linux') {

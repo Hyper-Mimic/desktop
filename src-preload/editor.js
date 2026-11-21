@@ -3,6 +3,14 @@ const {contextBridge, ipcRenderer} = require('electron');
 contextBridge.exposeInMainWorld('EditorPreload', {
   isInitiallyFullscreen: () => ipcRenderer.sendSync('is-initially-fullscreen'),
   getTitlebarState: () => ipcRenderer.sendSync('get-titlebar-state'),
+  // Sync so the menu bar can read the value during render; Desktop Settings pushes changes.
+  getShowProjectPageButton: () => ipcRenderer.sendSync('get-show-project-page-button'),
+  reportEditorTheme: (theme) => ipcRenderer.invoke('report-editor-theme', theme),
+  onShowProjectPageButtonChanged: (callback) => {
+    const listener = (event, showProjectPageButton) => callback(showProjectPageButton);
+    ipcRenderer.on('show-project-page-button-changed', listener);
+    return () => ipcRenderer.removeListener('show-project-page-button-changed', listener);
+  },
   minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
   toggleMaximizeWindow: () => ipcRenderer.invoke('toggle-maximize-window'),
   closeWindow: () => ipcRenderer.invoke('close-window'),

@@ -15,6 +15,8 @@ const {translate, updateLocale, getStrings} = require('../l10n');
 const {APP_NAME} = require('../brand');
 const prompts = require('../prompts');
 const settings = require('../settings');
+const theme = require('../theme');
+const AbstractWindow = require('./abstract');
 const privilegedFetch = require('../fetch');
 const RichPresence = require('../rich-presence.js');
 const FileAccessWindow = require('./file-access-window.js');
@@ -321,6 +323,21 @@ class EditorWindow extends ProjectRunningWindow {
         active: settings.menuBarInTitleBar,
         supported: isMenuBarInTitleBarSupported
       };
+    });
+
+    // Read synchronously by scratch-gui's menu bar (through the editor preload). Changes are
+    // pushed from Desktop Settings with 'show-project-page-button-changed'.
+    this.ipc.on('get-show-project-page-button', (e) => {
+      e.returnValue = settings.showProjectPageButton;
+    });
+
+    // custom-editor-theme only paints this window. The renderer reports the resolved colours so
+    // the main process can pass them on to every popup window (see src-main/theme.js).
+    this.ipc.handle('report-editor-theme', (event, editorTheme) => {
+      if (!theme.setEditorTheme(editorTheme)) return;
+      for (const window of AbstractWindow.getAllWindows()) {
+        theme.applyToWindow(window);
+      }
     });
 
     this.ipc.handle('minimize-window', () => {

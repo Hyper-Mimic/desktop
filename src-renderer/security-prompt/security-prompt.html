@@ -6,8 +6,8 @@
     <style>
       :root {
         font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-        color: black;
-        background-color: white;
+        color: var(--hm-window-text, black);
+        background-color: var(--hm-window-bg, white);
       }
       body {
         padding: 0;
@@ -55,10 +55,38 @@
           border-color: rgba(255, 255, 255, 0.15);
         }
       }
+            /* Title-bar space is opt-in: only a window whose OS title bar was actually hidden gets
+         the 32px. The theme script adds html.hm-custom-titlebar in that case; a native title
+         bar must not leave a duplicate gap (which also produced a page-level scrollbar).
+         Scrolling lives inside <main>, so the scrollbar never runs through the title bar. */
+      :root { --hm-titlebar-height: 0px; --hm-window-titlebar: #4c97ff; --hm-window-titlebar-text: #fff; }
+      html.hm-custom-titlebar { --hm-titlebar-height: 32px; }
+      #hm-window-titlebar { display: none; position: fixed; top: 0; left: 0; right: 0; height: var(--hm-titlebar-height);
+        box-sizing: border-box; align-items: center; padding: 0 12px; padding-right: 150px;
+        overflow: hidden; white-space: nowrap; font: 12px "Helvetica Neue", Helvetica, Arial, sans-serif;
+        background-color: var(--hm-window-titlebar); color: var(--hm-window-titlebar-text);
+        -webkit-app-region: drag; user-select: none; z-index: 2147483647; }
+      html.hm-custom-titlebar #hm-window-titlebar { display: flex; }
+      /* body is the one scroll container and starts BELOW the fixed title bar (margin, not
+         padding), so its scrollbar never runs through the title bar. main -- border included --
+         scrolls with the content inside it, as one block. */
+      html { height: 100%; overflow: hidden; }
+      body { margin-top: var(--hm-titlebar-height) !important;
+        height: calc(100vh - var(--hm-titlebar-height)) !important;
+        overflow-y: auto !important; overflow-x: hidden !important; box-sizing: border-box; }
+      /* Content shorter than the viewport has no scrollbar; longer content scrolls the whole
+         block below the title bar, border included. */
+      main { height: auto !important;
+        min-height: calc(100vh - var(--hm-titlebar-height)) !important; box-sizing: border-box; }
+      #app [class*="settings_container"] {
+        top: var(--hm-titlebar-height) !important;
+        height: calc(100% - var(--hm-titlebar-height)) !important;
+      }
     </style>
   </head>
 
   <body>
+    <div id="hm-window-titlebar"></div>
     <main>
       <p data-type="read-clipboard" data-l10n="security-prompt.read-clipboard1"></p>
       <p data-type="read-clipboard" data-l10n="security-prompt.read-clipboard2"></p>
