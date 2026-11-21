@@ -2,6 +2,16 @@ This document is the authoritative source for HyperMimic's changelogs. Everythin
 
 Prefix notes with "Windows:", "macOS:", or "Linux:" as needed. Do not use **formatting** or [links](https://hypermimic.netlify.app/).
 
+# 1.2.0 (2026-11-21)
+
+- 修复了成千上万个的bug，完善了成百上千个的细节处理
+- 一定程度上提升了拖拽工作区视图时的速度
+- 高级设置扩充：编辑器字体（本地/Google/导入）、离屏积木卸载、作品加载速度、允许改变部分界面元素的宽度等
+- 弹窗系统统一替换为顶部alert
+- 新功能：积木框选、积木框
+- 功能优化：书包、还原点、部分插件的体验（作品分析器、书签、待办等）
+- 优化Windows端desktop的原生弹窗的标题栏和内容样式，使之适应gui配色或addon配色
+
 # 1.1.0 (2026-10-5)
 
 - 修复许多已知bug
