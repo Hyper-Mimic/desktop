@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('DesktopSettingsPreload', {
   setExitFullscreenOnEscape: (exitFullscreenOnEscape) => ipcRenderer.invoke('set-exit-fullscreen-on-escape', exitFullscreenOnEscape),
   setRichPresence: (richPresence) => ipcRenderer.invoke('set-rich-presence', richPresence),
   setMenuBarInTitleBar: (menuBarInTitleBar) => ipcRenderer.invoke('set-menu-bar-in-title-bar', menuBarInTitleBar),
+  setShowProjectPageButton: (showProjectPageButton) => ipcRenderer.invoke('set-show-project-page-button', showProjectPageButton),
   setCrashDumps: (crashDumps) => ipcRenderer.invoke('set-crash-dumps', crashDumps),
   openUserData: () => ipcRenderer.invoke('open-user-data'),
   openCrashDumps: () => ipcRenderer.invoke('open-crash-dumps')

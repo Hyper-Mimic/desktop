@@ -36,7 +36,8 @@ class DesktopSettingsWindow extends AbstractWindow {
           // Reported instead of just reading settings.menuBarInTitleBar because the editor can
           // only apply the layout if this platform supports it at all.
           menuBarInTitleBarSupported: process.platform === 'win32' || process.platform === 'linux',
-          menuBarInTitleBar: settings.menuBarInTitleBar
+          menuBarInTitleBar: settings.menuBarInTitleBar,
+          showProjectPageButton: settings.showProjectPageButton
         }
       };
     });
@@ -163,6 +164,23 @@ class DesktopSettingsWindow extends AbstractWindow {
         recreated++;
       }
       return {recreated, cancelled: false, unsupported: false};
+    });
+
+    this.ipc.handle('set-show-project-page-button', async (event, showProjectPageButton) => {
+      const nextValue = !!showProjectPageButton;
+      settings.showProjectPageButton = nextValue;
+      await settings.save();
+
+      // The button is a conditional React render in scratch-gui's menu bar, not a window option,
+      // so there is no reason to rebuild the windows (which would throw away unsaved projects).
+      // Push the value instead: the old addon was dynamically disabled, so switching has always
+      // been live. Imported late due to circular dependencies, same as enumerate-media-devices.
+      const EditorWindow = require('./editor');
+      for (const editorWindow of AbstractWindow.getWindowsByClass(EditorWindow)) {
+        if (!editorWindow.window.isDestroyed()) {
+          editorWindow.window.webContents.send('show-project-page-button-changed', nextValue);
+        }
+      }
     });
 
     this.ipc.handle('open-user-data', async () => {

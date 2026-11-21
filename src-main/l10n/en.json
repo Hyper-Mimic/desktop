@@ -534,5 +534,9 @@
   "desktop-settings.menu-bar-in-title-bar-unsupported": {
     "string": "This is not supported on this platform.",
     "developer_comment": "Warning shown when the merged title bar was requested on a platform that does not support it. The option is hidden on macOS, so this is a fallback."
+  },
+  "desktop-settings.show-project-page-button": {
+    "string": "Show the \"See Project Page\" button in the editor menu bar",
+    "developer_comment": "Option in Desktop Settings. The desktop hides the community / project-page UI, so this button is the way to switch back to the project view. Takes effect immediately in open editor windows."
   }
 }

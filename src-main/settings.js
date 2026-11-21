@@ -197,6 +197,19 @@ class Settings {
   set menuBarInTitleBar (menuBarInTitleBar) {
     this.data.menuBarInTitleBar = menuBarInTitleBar;
   }
+
+  /**
+   * Show the "See Project Page" button in the editor's menu bar. The desktop hides the community /
+   * project-page UI, so without this button there is no way back to the project view. This used to
+   * be the `desktop-project-page-button` addon; the toggle now lives in Desktop Settings and is
+   * pushed to the open editor windows, so flipping it takes effect without a restart.
+   */
+  get showProjectPageButton () {
+    return this.data.showProjectPageButton === true;
+  }
+  set showProjectPageButton (showProjectPageButton) {
+    this.data.showProjectPageButton = showProjectPageButton;
+  }
 }
 
 module.exports = new Settings();
